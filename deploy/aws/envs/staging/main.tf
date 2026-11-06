@@ -45,7 +45,7 @@ module "stack" {
   domain        = "staging.nexrees.de"
   image         = var.image
   allowed_cidrs = var.allowed_cidrs
-  tenant_name   = "NexRees Staging"
+  tenant_name   = "NexRees"
 
   # Three staff logins to start with (Abi, 2026-11-06).
   users = [

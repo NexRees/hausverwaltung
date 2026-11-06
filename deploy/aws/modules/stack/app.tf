@@ -140,6 +140,7 @@ resource "aws_iam_role_policy" "task_documents" {
 locals {
   environment = merge({
     NODE_ENV          = "production"
+    APP_ENV           = var.environment
     AUTH_TRUST_HOST   = "true"
     AUTH_URL          = "https://${var.domain}"
     APP_URL           = "https://${var.domain}"

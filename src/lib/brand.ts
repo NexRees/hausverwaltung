@@ -16,3 +16,9 @@ export const BRAND = {
     license: "AGPL-3.0",
   },
 } as const;
+
+/** AGPL § 13: link to the exact source of the running build when its commit is known. */
+export function sourceUrlFor(sha: string | undefined): string {
+  const commit = sha?.trim();
+  return commit && /^[0-9a-f]{7,40}$/i.test(commit) ? `${BRAND.sourceUrl}/tree/${commit}` : BRAND.sourceUrl;
+}

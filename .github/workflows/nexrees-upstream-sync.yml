@@ -1,23 +1,39 @@
-# nexrees: mirror HaVeWa (fgilde/hausverwaltung) into branch `upstream` every week and open a
-# pull request upstream -> main when there is something new. See NEXREES.md.
+# nexrees: bring HaVeWa (fgilde/hausverwaltung) updates into NexRees every week without losing
+# the NexRees branding. See NEXREES.md "Merging upstream".
+#   1. Mirror upstream main into branch `upstream`.
+#   2. Merge it into a copy of main; brand files listed in .gitattributes keep our version.
+#   3. Run the tests, including the branding guard (src/lib/brand.test.ts).
+#   4. Open a pull request into main with the result.
+#   5. Clean merge + green tests: merge it automatically, which deploys to staging (never to
+#      production). Conflicts or red tests: the pull request waits for a person.
+#      Turn auto-merge off with the repository variable UPSTREAM_AUTO_MERGE=false.
 name: Upstream sync
 
 on:
   schedule:
-    - cron: "17 5 * * 1"
+    - cron: "17 5 * * *"
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
 
 jobs:
   sync:
     if: github.repository != 'fgilde/hausverwaltung'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Mirror upstream main into branch upstream
@@ -26,16 +42,83 @@ jobs:
           git fetch havewa main
           git push origin "refs/remotes/havewa/main:refs/heads/upstream" --force
 
-      - name: Open a pull request if main is behind
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Anything new?
+        id: check
         run: |
-          behind=$(git rev-list --count origin/main..havewa/main)
+          behind=$(git rev-list --count HEAD..havewa/main)
           echo "main is $behind commits behind upstream"
-          [ "$behind" -gt 0 ] || exit 0
-          if gh pr list --head upstream --base main --state open --json number --jq 'length' | grep -qv '^0$'; then
-            echo "sync pull request already open"; exit 0
+          echo "behind=$behind" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=$(git rev-parse --short havewa/main)" >> "$GITHUB_OUTPUT"
+          open=$(gh pr list --base main --state open --json headRefName \
+            --jq '[.[] | select(.headRefName == "upstream" or (.headRefName | startswith("sync/upstream-")))] | length')
+          echo "open=$open" >> "$GITHUB_OUTPUT"
+
+      - name: Merge upstream, keeping NexRees brand files
+        id: merge
+        if: steps.check.outputs.behind != '0' && steps.check.outputs.open == '0'
+        run: |
+          git config user.name "nexrees-sync[bot]"
+          git config user.email "nexrees-sync@users.noreply.github.com"
+          git config merge.ours.driver true
+          branch="sync/upstream-$(date -u +%Y%m%d)-${{ steps.check.outputs.upstream_sha }}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          git switch -c "$branch"
+          if git merge --no-ff --no-edit havewa/main -m "Merge HaVeWa ${{ steps.check.outputs.upstream_sha }} into NexRees"; then
+            echo "conflicts=" >> "$GITHUB_OUTPUT"
+          else
+            files=$(git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/')
+            { echo "conflicts<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+            git merge --abort
           fi
-          gh pr create --head upstream --base main \
-            --title "Upstream: merge $behind new HaVeWa commits" \
-            --body "Weekly sync from fgilde/hausverwaltung. Check PATCHES in NEXREES.md for conflicts, run the tests, deploy to staging before merging to production."
+
+      - uses: actions/setup-node@v4
+        if: steps.merge.outcome == 'success' && steps.merge.outputs.conflicts == ''
+        with:
+          node-version: 24
+
+      - name: Tests and branding guard
+        id: test
+        if: steps.merge.outcome == 'success' && steps.merge.outputs.conflicts == ''
+        continue-on-error: true
+        run: |
+          npx --yes npm@11 ci
+          npx prisma generate
+          npx vitest run 2>&1 | tee vitest.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Open pull request
+        if: steps.merge.outcome == 'success'
+        env:
+          BEHIND: ${{ steps.check.outputs.behind }}
+          BRANCH: ${{ steps.merge.outputs.branch }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+          TESTS: ${{ steps.test.outcome }}
+        run: |
+          if [ -n "$CONFLICTS" ]; then
+            # The merge needs a person: offer the plain upstream branch and name the files.
+            head=upstream
+            title="Upstream: $BEHIND HaVeWa commits, merge conflicts"
+            status="**Merge conflicts.** Merge \`upstream\` into a branch locally, resolve these files, keep the NexRees patches (NEXREES.md), then run \`npm test\`:"$'\n\n'"$CONFLICTS"
+          else
+            git push origin "HEAD:refs/heads/$BRANCH"
+            head=$BRANCH
+            if [ "$TESTS" = success ]; then
+              title="Upstream: merge $BEHIND HaVeWa commits"
+              status="Merged cleanly; NexRees brand files kept. **Tests and branding guard passed.**"
+            else
+              title="Upstream: merge $BEHIND HaVeWa commits (tests failing)"
+              status="Merged cleanly, but **tests failed**. If \`src/lib/brand.test.ts\` failed, upstream brought back HaVeWa branding: re-apply the NexRees version (NEXREES.md). Log: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            fi
+          fi
+          body="Daily sync from [fgilde/hausverwaltung](https://github.com/fgilde/hausverwaltung) (AGPL-3.0)."$'\n\n'"$status"$'\n\n'"Before merging: check the diff for new HaVeWa names or links, then merge. CI builds the image and deploys it to staging; promote to production after checking staging."
+          url=$(gh pr create --head "$head" --base main --title "$title" --body "$body")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        id: pr
+
+      - name: Merge automatically when clean and green
+        if: steps.pr.outcome == 'success' && steps.merge.outputs.conflicts == '' && steps.test.outcome == 'success' && vars.UPSTREAM_AUTO_MERGE != 'false'
+        run: |
+          gh pr merge "${{ steps.pr.outputs.url }}" --merge --delete-branch
+          # A merge made with the workflow token does not start other workflows on its own, so
+          # start the image build here; the staging deploy follows it as usual.
+          gh workflow run docker-publish.yml --ref main

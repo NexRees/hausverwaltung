@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/user-menu";
 import { NotificationBell } from "@/components/notification-bell";
 import { InfoDrawer } from "@/components/info-drawer";
 import { BRAND } from "@/lib/brand";
+import { EnvBadge } from "@/components/env-badge";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -35,6 +36,7 @@ export default async function PortalLayout({ children }: { children: React.React
           <img src="/icon.png" alt={BRAND.name} className="size-7 rounded-md" />
           {BRAND.name}
         </Link>
+        <EnvBadge className="ml-1" />
         <div className="ml-auto flex items-center gap-1">
           <InfoDrawer tenantName={tenant?.name ?? BRAND.name} />
           <NotificationBell items={notifItems} unread={unread} />

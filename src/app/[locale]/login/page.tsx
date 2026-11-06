@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { Check, Building2, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { needsSetup } from "@/lib/setup";
@@ -10,6 +10,8 @@ import { LoginForm } from "@/components/login-form";
 import { oidcConfigFromEnv } from "@/lib/sso";
 import { APP_VERSION_LABEL, APP_VERSION_FULL } from "@/lib/version";
 import { BRAND } from "@/lib/brand";
+import { BrandBackdrop } from "@/components/brand-backdrop";
+import { EnvBadge } from "@/components/env-badge";
 
 export default async function LoginPage() {
   if (await needsSetup()) redirect("/setup");
@@ -21,11 +23,12 @@ export default async function LoginPage() {
     orderBy: { createdAt: "asc" },
     select: { name: true, isDemo: true, logoKey: true },
   });
-  const tenantName = tenant?.name ?? t("app.name");
+  // nexrees: the login is the NexRees product login, not one tenant's (several tenants share it).
+  const tenantName = BRAND.name;
   const isDemo = tenant?.isDemo ?? false;
   const sso = oidcConfigFromEnv();
   // Eigenes Admin-Logo, sonst Produkt-Logo
-  const logoUrl = tenant?.logoKey ? "/api/logo" : "/logo.png";
+  const logoUrl = "/logo.png";
   const videos = await listBackgroundVideos();
 
   const points = [t("login.point1"), t("login.point2"), t("login.point3")];
@@ -42,24 +45,30 @@ export default async function LoginPage() {
         {videos.length > 0 ? (
           <BackgroundVideo sources={videos} className="absolute inset-0 -z-10" />
         ) : (
-          <div className="absolute inset-0 -z-10 bg-primary" />
+          <BrandBackdrop />
         )}
-        {/* Legibilitäts-Overlays */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/45 to-black/25" />
-        <div className="absolute inset-0 -z-10 bg-primary/25 mix-blend-multiply" />
+        {/* Legibilitäts-Overlays (nur über Video; der NexRees-Hintergrund bringt eigene mit) */}
+        {videos.length > 0 && (
+          <>
+            <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/45 to-black/25" />
+            <div className="absolute inset-0 -z-10 bg-primary/25 mix-blend-multiply" />
+          </>
+        )}
 
-        <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-white/15 backdrop-blur">
-            <Building2 className="size-5" />
-          </div>
-          <div className="text-lg font-semibold tracking-tight">{tenantName}</div>
+        <div className="nx-rise flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.png" alt="" className="size-10 rounded-xl ring-1 ring-white/20" />
+          <div className="text-lg font-semibold tracking-tight">{BRAND.name}</div>
+          <EnvBadge className="border-amber-300/40 bg-amber-300/15 text-amber-200 dark:text-amber-200" />
         </div>
 
         <div className="max-w-md space-y-6">
-          <h2 className="text-4xl font-semibold leading-tight tracking-tight">{t("login.tagline")}</h2>
+          <h2 className="nx-rise text-4xl font-semibold leading-tight tracking-tight" style={{ ["--nx-delay" as string]: "120ms" }}>
+            {t("login.tagline")}
+          </h2>
           <ul className="space-y-3 text-sm text-white/90">
             {points.map((p, i) => (
-              <li key={i} className="flex items-start gap-3">
+              <li key={i} className="nx-rise flex items-start gap-3" style={{ ["--nx-delay" as string]: `${260 + i * 120}ms` }}>
                 <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white/20">
                   <Check className="size-3.5" />
                 </span>
@@ -92,7 +101,7 @@ export default async function LoginPage() {
               "radial-gradient(60% 50% at 100% 0%, color-mix(in oklch, var(--primary) 12%, transparent) 0%, transparent 60%)",
           }}
         />
-        <div className="relative w-full max-w-sm space-y-8">
+        <div className="nx-rise relative w-full max-w-sm space-y-8" style={{ ["--nx-delay" as string]: "80ms" }}>
           <div className="space-y-3 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoUrl} alt={tenantName} className="mx-auto h-44 w-auto object-contain" />
@@ -100,6 +109,7 @@ export default async function LoginPage() {
               {t("login.welcomeTo")} {tenantName}
             </h1>
             <p className="text-sm text-muted-foreground">{t("login.subtitle")}</p>
+            <EnvBadge />
           </div>
 
           <LoginForm

@@ -1,2 +1,13 @@
 # Shell-Skripte immer mit LF (werden per wget|bash auf Linux ausgeführt).
 *.sh text eol=lf
+
+# nexrees: when HaVeWa and NexRees both change one of these files, the upstream sync keeps ours
+# (merge driver "ours" is set up in .github/workflows/nexrees-upstream-sync.yml). Files only
+# upstream changed would still come in, so src/lib/brand.test.ts checks them after every merge.
+public/logo.png merge=ours
+public/icon.png merge=ours
+public/marketing/icon.png merge=ours
+src/app/icon.png merge=ours
+src/lib/brand.ts merge=ours
+NOTICE merge=ours
+NEXREES.md merge=ours

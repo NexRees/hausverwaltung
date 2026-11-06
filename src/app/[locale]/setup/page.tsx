@@ -6,6 +6,7 @@ import { BackgroundVideo } from "@/components/background-video";
 import { SetupWizard } from "@/components/setup-wizard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BRAND } from "@/lib/brand";
+import { BrandBackdrop } from "@/components/brand-backdrop";
 
 export default async function SetupPage() {
   if (!(await needsSetup())) redirect("/login");
@@ -17,9 +18,9 @@ export default async function SetupPage() {
       {videos.length > 0 ? (
         <BackgroundVideo sources={videos} className="absolute inset-0 -z-10" />
       ) : (
-        <div className="absolute inset-0 -z-10 bg-primary" />
+        <BrandBackdrop />
       )}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-black/70 via-black/50 to-primary/40" />
+      {videos.length > 0 && <div className="absolute inset-0 -z-10 bg-gradient-to-br from-black/70 via-black/50 to-primary/40" />}
 
       {/* Produkt-Icon unten rechts im Video-Bereich */}
       {/* eslint-disable-next-line @next/next/no-img-element */}

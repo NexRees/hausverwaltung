@@ -10,7 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { APP_VERSION_FULL_NUMBER, APP_VERSION_LABEL, APP_BUILD, APP_SHA } from "@/lib/version";
-import { BRAND } from "@/lib/brand";
+import { BRAND, sourceUrlFor } from "@/lib/brand";
 
 const DOCS_URL = "https://fgilde.github.io/hausverwaltung/docs/";
 // nexrees: own website, issues and the AGPL source link; docs stay upstream's.
@@ -26,7 +26,7 @@ export function InfoDrawer({ tenantName }: { tenantName: string }) {
     { href: DOCS_URL, icon: BookOpen, label: t("docs") },
     { href: SITE_URL, icon: Globe, label: t("website") },
     { href: ISSUES_URL, icon: Bug, label: t("issues") },
-    { href: BRAND.sourceUrl, icon: Code2, label: t("source") },
+    { href: sourceUrlFor(APP_SHA), icon: Code2, label: t("source") },
   ];
 
   return (
