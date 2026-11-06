@@ -1,0 +1,41 @@
+# nexrees: mirror HaVeWa (fgilde/hausverwaltung) into branch `upstream` every week and open a
+# pull request upstream -> main when there is something new. See NEXREES.md.
+name: Upstream sync
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    if: github.repository != 'fgilde/hausverwaltung'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror upstream main into branch upstream
+        run: |
+          git remote add havewa https://github.com/fgilde/hausverwaltung.git
+          git fetch havewa main
+          git push origin "refs/remotes/havewa/main:refs/heads/upstream" --force
+
+      - name: Open a pull request if main is behind
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          behind=$(git rev-list --count origin/main..havewa/main)
+          echo "main is $behind commits behind upstream"
+          [ "$behind" -gt 0 ] || exit 0
+          if gh pr list --head upstream --base main --state open --json number --jq 'length' | grep -qv '^0$'; then
+            echo "sync pull request already open"; exit 0
+          fi
+          gh pr create --head upstream --base main \
+            --title "Upstream: merge $behind new HaVeWa commits" \
+            --body "Weekly sync from fgilde/hausverwaltung. Check PATCHES in NEXREES.md for conflicts, run the tests, deploy to staging before merging to production."
