@@ -42,6 +42,7 @@ import { createTask, toggleTask, deleteTask } from "@/server/actions/tasks";
 import { AiAssistant } from "@/components/ai-assistant";
 import { MonthlyBars, OccupancyDonut } from "@/components/dashboard-charts";
 import { ReminderButton } from "@/components/reminder-button";
+import { BRAND } from "@/lib/brand";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -277,7 +278,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t("dashboard.recentProperties")}</CardTitle>
-          <CardDescription>{properties.length} · HaVeWa</CardDescription>
+          <CardDescription>{properties.length} · {BRAND.name}</CardDescription>
         </CardHeader>
         <CardContent>
           {properties.length === 0 ? (

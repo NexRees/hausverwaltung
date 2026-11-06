@@ -9,6 +9,7 @@ import { BackgroundVideo } from "@/components/background-video";
 import { LoginForm } from "@/components/login-form";
 import { oidcConfigFromEnv } from "@/lib/sso";
 import { APP_VERSION_LABEL, APP_VERSION_FULL } from "@/lib/version";
+import { BRAND } from "@/lib/brand";
 
 export default async function LoginPage() {
   if (await needsSetup()) redirect("/setup");
@@ -77,7 +78,7 @@ export default async function LoginPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/marketing/icon.png"
-          alt="HaVeWa"
+          alt={BRAND.name}
           className="pointer-events-none absolute bottom-6 right-6 h-20 w-auto object-contain opacity-90 drop-shadow-lg"
         />
       </div>

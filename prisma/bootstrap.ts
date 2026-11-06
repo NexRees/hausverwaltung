@@ -42,7 +42,7 @@ async function main() {
   const email = process.env.ADMIN_EMAIL?.trim();
   const password = process.env.ADMIN_PASSWORD;
   if (email && password) {
-    const tenantName = process.env.TENANT_NAME?.trim() || "HaVeWa";
+    const tenantName = process.env.TENANT_NAME?.trim() || "NexRees";
     const adminName = process.env.ADMIN_NAME?.trim() || "Admin";
     const tenant = await prisma.tenant.create({ data: { name: tenantName } });
     await prisma.user.create({
