@@ -1,0 +1,63 @@
+# nexrees: roll staging.nexrees.de to the image that "Build and push image" just published.
+# Needs repository variable AWS_STAGING_DEPLOY_ROLE (output stack.deploy_role_arn of
+# deploy/aws/envs/staging). Without it the job is skipped.
+name: Deploy staging
+
+on:
+  workflow_run:
+    workflows: ["Build and push image"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      vars.AWS_STAGING_DEPLOY_ROLE != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      CLUSTER: nexrees-staging
+      SERVICE: app
+      FAMILY: nexrees-staging
+    steps:
+      - name: Pick the image of this commit
+        id: img
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:sha-${SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_STAGING_DEPLOY_ROLE }}
+          aws-region: eu-central-1
+
+      - name: Current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition "$FAMILY" --query taskDefinition > task.json
+
+      - name: Swap in the new image
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task.json
+          container-name: app
+          image: ${{ steps.img.outputs.image }}
+
+      - name: Deploy and wait until healthy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.CLUSTER }}
+          service: ${{ env.SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 20

@@ -16,6 +16,8 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { SearchBox } from "@/components/search-box";
+import { BRAND } from "@/lib/brand";
+import { EnvBadge } from "@/components/env-badge";
 
 export default async function AdminLayout({
   children,
@@ -66,8 +68,9 @@ export default async function AdminLayout({
               ▸ {tenant?.name}
             </a>
           )}
+          <EnvBadge className="ml-2" />
           <div className="ml-auto flex items-center gap-1">
-            <InfoDrawer tenantName={tenant?.name ?? "HaVeWa"} />
+            <InfoDrawer tenantName={tenant?.name ?? BRAND.name} />
             <NotificationBell items={notifItems} unread={unread} />
             <LanguageSwitcher />
             <ThemeToggle />

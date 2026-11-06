@@ -1,0 +1,16 @@
+NexRees Hausverwaltung
+Copyright (C) 2026 NexRees UG (haftungsbeschränkt) i. G., Aachen, for the modifications.
+
+This program is a modified version of HaVeWa
+(https://github.com/fgilde/hausverwaltung), Copyright (C) 2026 Florian Gilde.
+
+NexRees started modifying it on 2026-11-06 from upstream commit cb13079.
+Every NexRees change is a commit in this repository; the list of patches to HaVeWa's own
+files, with reasons, is in NEXREES.md.
+
+This program is free software: you can redistribute it and/or modify it under the terms of
+the GNU Affero General Public License as published by the Free Software Foundation, version 3
+(see LICENSE). HaVeWa's own licensing terms are in LICENSING.md and still apply to its code.
+
+"HaVeWa" is the name of the upstream project. NexRees is not affiliated with or endorsed by
+its author.

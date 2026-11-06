@@ -2,6 +2,7 @@ import "server-only";
 import path from "node:path";
 import PDFDocument from "pdfkit";
 import { letterBlocks } from "@/lib/letter-html";
+import { BRAND } from "@/lib/brand";
 
 // Geschäftsbrief nach DIN 5008 (Form B) als PDF/A-1b (#58). PDF/A verlangt die
 // Deutsche Post (E-POSTBUSINESS); dafür ist die Schrift eingebettet (Liberation
@@ -30,7 +31,7 @@ export function letterPdf(l: LetterInput): Promise<Buffer> {
     pdfVersion: "1.4",
     subset: "PDF/A-1b",
     font: path.join(FONTS, "LiberationSans-Regular.ttf"),
-    info: { Title: l.subject, Author: l.sender.name, Creator: "HaVeWa" },
+    info: { Title: l.subject, Author: l.sender.name, Creator: BRAND.name },
     lang: "de-DE",
     bufferPages: true, // für „Seite x von y“
   });

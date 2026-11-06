@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, BookOpen, Globe, Bug, ExternalLink, Building2 } from "lucide-react";
+import { Info, BookOpen, Globe, Bug, ExternalLink, Building2, Code2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,10 +10,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { APP_VERSION_FULL_NUMBER, APP_VERSION_LABEL, APP_BUILD, APP_SHA } from "@/lib/version";
+import { BRAND, sourceUrlFor } from "@/lib/brand";
 
 const DOCS_URL = "https://fgilde.github.io/hausverwaltung/docs/";
-const SITE_URL = "https://havewa.app";
-const ISSUES_URL = "https://github.com/fgilde/hausverwaltung/issues";
+// nexrees: own website, issues and the AGPL source link; docs stay upstream's.
+const SITE_URL = BRAND.website;
+const ISSUES_URL = BRAND.issuesUrl;
 const GILDE_URL = "https://www.gilde.org";
 const GILDE_LOGO = "https://www.gilde.org/gilde/logo.svg";
 
@@ -24,6 +26,7 @@ export function InfoDrawer({ tenantName }: { tenantName: string }) {
     { href: DOCS_URL, icon: BookOpen, label: t("docs") },
     { href: SITE_URL, icon: Globe, label: t("website") },
     { href: ISSUES_URL, icon: Bug, label: t("issues") },
+    { href: sourceUrlFor(APP_SHA), icon: Code2, label: t("source") },
   ];
 
   return (
@@ -35,16 +38,16 @@ export function InfoDrawer({ tenantName }: { tenantName: string }) {
       </SheetTrigger>
       <SheetContent side="right" className="w-[92vw] gap-0 overflow-y-auto p-0 sm:max-w-sm">
         {/* Kopf: satter Verlauf (unabhängig von der Brandfarbe) + großes Logo */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700 p-6 text-white">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0A0B0E] via-[#111318] to-[#1B2A99] p-6 text-white">
           <div className="pointer-events-none absolute -right-10 -top-12 size-48 rounded-full bg-white/15 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-14 -left-8 size-40 rounded-full bg-fuchsia-500/25 blur-3xl" />
           <div className="relative flex flex-col items-center text-center">
             <div className="grid size-56 place-items-center rounded-3xl bg-white/15 shadow-lg ring-1 ring-white/30 backdrop-blur">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="HaVeWa" className="size-48 rounded-2xl object-contain" />
+              <img src="/logo.png" alt={BRAND.name} className="size-48 rounded-2xl object-contain" />
             </div>
             <SheetTitle className="mt-4 text-2xl font-semibold tracking-tight text-white">
-              HaVeWa
+              {BRAND.name}
             </SheetTitle>
             <p className="text-sm text-white/80">{t("tagline")}</p>
           </div>
@@ -85,6 +88,9 @@ export function InfoDrawer({ tenantName }: { tenantName: string }) {
               <dd className="truncate text-right text-xs font-medium">{tenantName}</dd>
             </div>
           </dl>
+
+          {/* nexrees: AGPL-3.0 notice (§ 5, § 13) */}
+          <p className="text-xs leading-relaxed text-muted-foreground">{t("basedOn")}</p>
 
           {/* Links */}
           <nav className="grid gap-1">

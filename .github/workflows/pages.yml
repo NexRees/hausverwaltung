@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   build:
+    # nexrees: HaVeWa's own site; not published from forks.
+    if: github.repository == 'fgilde/hausverwaltung'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

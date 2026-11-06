@@ -1,5 +1,6 @@
 // OpenAPI 3.1 Beschreibung der HaVeWa REST-API. Öffentlich (keine Geheimnisse),
 // dient Scalar/Swagger als Referenz.
+import { BRAND } from "@/lib/brand";
 
 const listOp = (tag: string, summary: string) => ({
   tags: [tag],
@@ -11,10 +12,11 @@ const listOp = (tag: string, summary: string) => ({
 const spec = {
   openapi: "3.1.0",
   info: {
-    title: "HaVeWa API",
+    title: `${BRAND.name} API`,
     version: "1.0.0",
     description:
-      "REST-API der Hausverwaltungssoftware HaVeWa. Authentifizierung per Bearer-Token " +
+      `REST-API der Hausverwaltungssoftware ${BRAND.name} (basiert auf HaVeWa, AGPL-3.0). ` +
+        "Authentifizierung per Bearer-Token " +
       "(persönlicher Zugangstoken aus den Einstellungen). Alle Daten sind auf den Mandanten des Tokens beschränkt.",
   },
   servers: [{ url: "/" }],

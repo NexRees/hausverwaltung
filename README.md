@@ -1,5 +1,9 @@
 # HaVeWa — Property Management
 
+> **NexRees fork.** This repository is the NexRees edition of HaVeWa, run as NexRees at
+> `*.nexrees.de` and licensed like HaVeWa under the AGPL-3.0. What we changed and how we
+> follow upstream: [NEXREES.md](NEXREES.md). AWS hosting: [deploy/aws](deploy/aws/README.md).
+
 _🇬🇧 English · 🇩🇪 [Deutsch](README.de.md)_
 
 [![QuickRun](https://quickrun.org/badge.svg)](https://quickrun.org/run?repo=fgilde/hausverwaltung)

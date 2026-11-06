@@ -11,6 +11,8 @@ jobs:
   # CasaOS reads a custom app source as a zip whose root is a build/sysroot/... tree. Build it from
   # store/casaos/ and keep it at a fixed release tag, so the URL a user pastes never changes.
   casaos-store:
+    # nexrees: HaVeWa's own store/site; not published from forks.
+    if: github.repository == 'fgilde/hausverwaltung'
     runs-on: ubuntu-latest
     permissions:
       contents: write

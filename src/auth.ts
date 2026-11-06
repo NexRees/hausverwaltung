@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { oidcConfigFromEnv, resolveSsoUser } from "@/lib/sso";
+import { provisionPolicyFromEnv, provisionSsoUser } from "@/lib/sso-provision";
 
 const providers: Provider[] = [
   Credentials({
@@ -33,6 +34,8 @@ const providers: Provider[] = [
 // Optionales OIDC/SSO — nur wenn per Env konfiguriert.
 const oidc = oidcConfigFromEnv();
 if (oidc) providers.push(oidc as unknown as Provider);
+// nexrees: company accounts (e.g. Google Workspace) may create their own user on first sign-in.
+const provisionPolicy = oidc ? provisionPolicyFromEnv() : null;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -40,9 +43,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   callbacks: {
     // SSO meldet nur bestehende Benutzer an (kein Auto-Provisioning).
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "oidc") {
-        return !!(await resolveSsoUser(user?.email));
+        if (await resolveSsoUser(user?.email)) return true;
+        return provisionPolicy ? provisionSsoUser(prisma, profile, provisionPolicy) : false;
       }
       return true;
     },

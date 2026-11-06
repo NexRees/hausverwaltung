@@ -1,20 +1,22 @@
 {
   "app": {
-    "name": "HaVeWa",
+    "name": "NexRees",
     "tagline": "Property Management"
   },
   "about": {
-    "title": "About HaVeWa",
+    "title": "About NexRees",
     "tagline": "Property & HOA management",
     "beta": "Beta",
-    "betaNote": "HaVeWa is in its beta testing phase. Features may change; please report bugs via \"Report an issue\".",
+    "betaNote": "NexRees is in its beta testing phase. Features may change; please report bugs via \"Report an issue\".",
     "version": "Version",
     "build": "Build",
     "tenant": "Tenant",
     "docs": "Documentation",
     "website": "Official website",
     "issues": "Report an issue",
-    "madeBy": "Built by"
+    "madeBy": "HaVeWa made by",
+    "source": "Source code (AGPL-3.0)",
+    "basedOn": "NexRees is based on HaVeWa by Florian Gilde and, like HaVeWa, licensed under the GNU AGPL-3.0. Get the source of this version via \"Source code\"."
   },
   "common": {
     "search": "Search",
@@ -214,7 +216,7 @@
     "brandColor": "Theme colour",
     "preview": "Preview",
     "submit": "Complete setup",
-    "welcomeTitle": "Welcome to HaVeWa",
+    "welcomeTitle": "Welcome to NexRees",
     "welcomeText": "Your property management will be ready in a few steps. You can skip steps and add them later in settings.",
     "brandingText": "Pick a theme colour for your app — changeable any time.",
     "propertyText": "Optional: create your first property right away.",

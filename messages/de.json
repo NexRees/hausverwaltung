@@ -1,20 +1,22 @@
 {
   "app": {
-    "name": "HaVeWa",
+    "name": "NexRees",
     "tagline": "Hausverwaltung"
   },
   "about": {
-    "title": "Über HaVeWa",
+    "title": "Über NexRees",
     "tagline": "Haus- & WEG-Verwaltung",
     "beta": "Beta",
-    "betaNote": "HaVeWa befindet sich in der Beta-Testphase. Funktionen können sich ändern; Fehler bitte über „Issue melden“ zurückmelden.",
+    "betaNote": "NexRees befindet sich in der Beta-Testphase. Funktionen können sich ändern; Fehler bitte über „Issue melden“ zurückmelden.",
     "version": "Version",
     "build": "Build",
     "tenant": "Mandant",
     "docs": "Dokumentation",
     "website": "Offizielle Webseite",
     "issues": "Issue melden",
-    "madeBy": "Entwickelt von"
+    "madeBy": "HaVeWa entwickelt von",
+    "source": "Quellcode (AGPL-3.0)",
+    "basedOn": "NexRees basiert auf HaVeWa von Florian Gilde und ist wie HaVeWa unter der GNU AGPL-3.0 lizenziert. Den Quellcode dieser Version erhalten Sie über „Quellcode“."
   },
   "common": {
     "search": "Suchen",
@@ -214,7 +216,7 @@
     "brandColor": "Theme-Farbe",
     "preview": "Vorschau",
     "submit": "Einrichtung abschließen",
-    "welcomeTitle": "Willkommen bei HaVeWa",
+    "welcomeTitle": "Willkommen bei NexRees",
     "welcomeText": "In wenigen Schritten ist Ihre Hausverwaltung startklar. Sie können Schritte überspringen und später in den Einstellungen ergänzen.",
     "brandingText": "Wählen Sie eine Theme-Farbe für Ihre App — jederzeit änderbar.",
     "propertyText": "Optional: legen Sie direkt Ihr erstes Objekt an.",

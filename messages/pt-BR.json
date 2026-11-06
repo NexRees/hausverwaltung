@@ -1,20 +1,22 @@
 {
   "app": {
-    "name": "HaVeWa",
+    "name": "NexRees",
     "tagline": "Gestão imobiliária"
   },
   "about": {
-    "title": "Sobre o HaVeWa",
+    "title": "Sobre o NexRees",
     "tagline": "Gestão imobiliária e condominial",
     "beta": "Beta",
-    "betaNote": "O HaVeWa está em fase beta. Os recursos podem mudar; reporte problemas em \"Relatar um problema\".",
+    "betaNote": "O NexRees está em fase beta. Os recursos podem mudar; reporte problemas em \"Relatar um problema\".",
     "version": "Versão",
     "build": "Compilação",
     "tenant": "Organização",
     "docs": "Documentação",
     "website": "Site oficial",
     "issues": "Relatar um problema",
-    "madeBy": "Desenvolvido por"
+    "madeBy": "HaVeWa desenvolvido por",
+    "source": "Código-fonte (AGPL-3.0)",
+    "basedOn": "O NexRees é baseado no HaVeWa de Florian Gilde e, como o HaVeWa, licenciado sob a GNU AGPL-3.0. Obtenha o código-fonte desta versão em \"Código-fonte\"."
   },
   "common": {
     "search": "Pesquisar",
@@ -214,7 +216,7 @@
     "brandColor": "Cor do tema",
     "preview": "Pré-visualização",
     "submit": "Concluir configuração",
-    "welcomeTitle": "Boas-vindas ao HaVeWa",
+    "welcomeTitle": "Boas-vindas ao NexRees",
     "welcomeText": "Sua administradora estará pronta em poucos passos. Você pode pular etapas e preenchê-las depois nas configurações.",
     "brandingText": "Escolha uma cor para o tema do aplicativo. Você pode alterá-la a qualquer momento.",
     "propertyText": "Opcional: crie seu primeiro imóvel agora.",
