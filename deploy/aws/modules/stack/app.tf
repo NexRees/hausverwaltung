@@ -149,8 +149,14 @@ locals {
     ADMIN_EMAIL       = local.admin.email
     ADMIN_NAME        = local.admin.name
     TENANT_NAME       = var.tenant_name
+    }, var.sso == null ? {} : {
+    OIDC_NAME                  = var.sso.name
+    OIDC_ISSUER                = var.sso.issuer
+    OIDC_CLIENT_ID             = var.sso.client_id
+    SSO_AUTO_PROVISION_DOMAINS = join(",", var.sso.auto_provision_domains)
+    SSO_DEFAULT_ROLE           = var.sso.default_role
   }, var.extra_environment)
-  secret_keys = ["DATABASE_URL", "AUTH_SECRET", "ADMIN_PASSWORD", "NEXREES_USERS"]
+  secret_keys = concat(["DATABASE_URL", "AUTH_SECRET", "ADMIN_PASSWORD", "NEXREES_USERS"], var.sso == null ? [] : ["OIDC_CLIENT_SECRET"])
 }
 
 resource "aws_ecs_task_definition" "app" {

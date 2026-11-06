@@ -175,12 +175,12 @@ locals {
     role     = u.role
     password = random_password.user[u.email].result
   }])
-  app_secrets = {
+  app_secrets = merge({
     DATABASE_URL   = "postgresql://havewa:${random_password.db.result}@${aws_db_instance.this.address}:5432/havewa?schema=public&sslmode=require"
     AUTH_SECRET    = random_password.auth_secret.result
     ADMIN_PASSWORD = random_password.user[local.admin.email].result
     NEXREES_USERS  = local.users_json
-  }
+  }, var.sso == null ? {} : { OIDC_CLIENT_SECRET = var.sso_client_secret })
 }
 
 resource "aws_secretsmanager_secret" "app" {

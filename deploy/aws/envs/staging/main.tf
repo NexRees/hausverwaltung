@@ -33,6 +33,18 @@ variable "image" {
   type        = string
 }
 
+# Google Workspace sign-in (deploy/aws/README.md "Company sign-in"). Empty = off.
+variable "google_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "google_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 variable "allowed_cidrs" {
   type    = list(string)
   default = ["0.0.0.0/0"]
@@ -58,6 +70,16 @@ module "stack" {
     # Staging never sends real mail: no SMTP is configured, so the outbox stays in the app.
     HAVEWA_DISABLE_SCHEDULER = "false"
   }
+
+  # Everyone with a NexRees Google Workspace account can sign in; first sign-in creates the user.
+  sso = var.google_client_id == "" ? null : {
+    name                   = "Google"
+    issuer                 = "https://accounts.google.com"
+    client_id              = var.google_client_id
+    auto_provision_domains = ["nexrees.de"]
+    default_role           = "VERWALTER"
+  }
+  sso_client_secret = var.google_client_secret
 
   github_repository = "NexRees/hausverwaltung"
 }

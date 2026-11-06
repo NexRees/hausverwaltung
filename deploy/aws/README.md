@@ -85,6 +85,30 @@ Terraform 1.9+, and this repository on GitHub as `NexRees/hausverwaltung`.
 
    Hand each person their password privately; they can change it in the app.
 
+## Company sign-in (Google Workspace)
+
+Everyone with a `@nexrees.de` Google Workspace account can sign in with "Mit Google anmelden".
+The first sign-in creates their user with the role `VERWALTER` (an admin can change it under
+Benutzer). Accounts outside nexrees.de, unverified addresses and personal Google accounts are
+refused. ADMIN is never given automatically. E-mail and password keep working.
+
+1. Google Cloud Console (signed in as a NexRees Workspace admin) → new project `nexrees-sso`.
+2. **Google Auth Platform → Branding**: app name NexRees, support e-mail; **Audience**: user type
+   **Internal** (only NexRees Workspace accounts can even reach the consent screen).
+3. **Clients → Create client** → Web application, name `NexRees staging`:
+   - Authorised JavaScript origin: `https://staging.nexrees.de`
+   - Authorised redirect URI: `https://staging.nexrees.de/api/auth/callback/oidc`
+4. Apply with the client ID and secret (they go to Secrets Manager, never into git):
+
+   ```sh
+   export TF_VAR_google_client_id=...apps.googleusercontent.com
+   export TF_VAR_google_client_secret=...
+   terraform apply -var image=$IMAGE
+   ```
+
+Production gets its own client with `https://app.nexrees.de/...`. To change the default role or
+add domains, edit the `sso` block in `envs/staging/main.tf`.
+
 ## Later
 
 - Restrict `allowed_cidrs` to office or VPN ranges once known.

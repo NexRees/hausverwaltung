@@ -109,3 +109,41 @@ run "latest_tag_is_refused" {
   }
   expect_failures = [var.image]
 }
+
+run "google_sign_in_secret_stays_out_of_plain_env" {
+  command = plan
+  variables {
+    sso = {
+      name                   = "Google"
+      issuer                 = "https://accounts.google.com"
+      client_id              = "123.apps.googleusercontent.com"
+      auto_provision_domains = ["nexrees.de"]
+    }
+    sso_client_secret = "test-secret"
+  }
+  assert {
+    condition     = contains(local.secret_keys, "OIDC_CLIENT_SECRET") && !contains(keys(local.environment), "OIDC_CLIENT_SECRET")
+    error_message = "The OIDC client secret must come from Secrets Manager."
+  }
+  assert {
+    condition     = local.environment.SSO_AUTO_PROVISION_DOMAINS == "nexrees.de" && local.environment.SSO_DEFAULT_ROLE == "VERWALTER"
+    error_message = "Company accounts on nexrees.de get the VERWALTER role by default."
+  }
+}
+
+run "sso_never_hands_out_admin" {
+  command = plan
+  variables {
+    sso               = { name = "Google", issuer = "https://accounts.google.com", client_id = "x", default_role = "ADMIN" }
+    sso_client_secret = "s"
+  }
+  expect_failures = [var.sso]
+}
+
+run "sso_needs_its_secret" {
+  command = plan
+  variables {
+    sso = { name = "Google", issuer = "https://accounts.google.com", client_id = "x" }
+  }
+  expect_failures = [var.sso_client_secret]
+}
