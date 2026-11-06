@@ -20,7 +20,7 @@ what we changed, so every upstream merge stays quick.
 | Branch | What |
 |---|---|
 | `upstream` | Exact mirror of `fgilde/hausverwaltung` `main`; never edited by hand. Updated weekly by `.github/workflows/nexrees-upstream-sync.yml`, which opens a pull request into `main`. |
-| `main` | NexRees: upstream plus the patches below. Every push builds an image (`ghcr.io/nexrees/nexrees-hv:sha-<short>`) and deploys it to staging. |
+| `main` | NexRees: upstream plus the patches below. Every push builds an image (`ghcr.io/nexrees/hausverwaltung:sha-<short>`) and deploys it to staging. |
 
 ## Patches to HaVeWa files
 

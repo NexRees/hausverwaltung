@@ -30,13 +30,13 @@ variables {
   name        = "nexrees-staging"
   environment = "staging"
   domain      = "staging.nexrees.de"
-  image       = "ghcr.io/nexrees/nexrees-hv:sha-abc1234"
+  image       = "ghcr.io/nexrees/hausverwaltung:sha-abc1234"
   users = [
     { email = "admin@nexrees.de", name = "Admin", role = "ADMIN" },
     { email = "verwaltung@nexrees.de", name = "Verwaltung", role = "VERWALTER" },
     { email = "buchhaltung@nexrees.de", name = "Buchhaltung", role = "BUCHHALTUNG" },
   ]
-  github_repository = "NexRees/nexrees-hv"
+  github_repository = "NexRees/hausverwaltung"
 }
 
 run "data_is_private_and_encrypted" {
@@ -105,7 +105,7 @@ run "first_user_must_be_admin" {
 run "latest_tag_is_refused" {
   command = plan
   variables {
-    image = "ghcr.io/nexrees/nexrees-hv:latest"
+    image = "ghcr.io/nexrees/hausverwaltung:latest"
   }
   expect_failures = [var.image]
 }

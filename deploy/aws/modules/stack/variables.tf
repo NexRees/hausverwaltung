@@ -18,7 +18,7 @@ variable "domain" {
 }
 
 variable "image" {
-  description = "Container image with an immutable tag (sha-<short> or a digest), e.g. ghcr.io/nexrees/nexrees-hv:sha-1a2b3c4."
+  description = "Container image with an immutable tag (sha-<short> or a digest), e.g. ghcr.io/nexrees/hausverwaltung:sha-1a2b3c4."
   type        = string
   validation {
     condition     = !endswith(var.image, ":latest")

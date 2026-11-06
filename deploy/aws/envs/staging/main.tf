@@ -23,13 +23,13 @@ provider "aws" {
       Project     = "nexrees-hv"
       Environment = "staging"
       ManagedBy   = "terraform"
-      Repository  = "NexRees/nexrees-hv"
+      Repository  = "NexRees/hausverwaltung"
     }
   }
 }
 
 variable "image" {
-  description = "First image to run, e.g. ghcr.io/nexrees/nexrees-hv:sha-1a2b3c4. Later images come from CI."
+  description = "First image to run, e.g. ghcr.io/nexrees/hausverwaltung:sha-1a2b3c4. Later images come from CI."
   type        = string
 }
 
@@ -59,7 +59,7 @@ module "stack" {
     HAVEWA_DISABLE_SCHEDULER = "false"
   }
 
-  github_repository = "NexRees/nexrees-hv"
+  github_repository = "NexRees/hausverwaltung"
 }
 
 output "stack" {
