@@ -42,6 +42,7 @@ what we changed, so every upstream merge stays quick.
 | Object storage | `src/lib/storage.ts`, `src/lib/storage-s3.test.ts`, `@aws-sdk/client-s3` | Documents in S3 when `STORAGE_S3_BUCKET` is set (tests: `storage-s3.test.ts`), so app containers need no shared disk. Local disk stays the default. Candidate to offer upstream. |
 | Staff logins | `prisma/nexrees-users.ts` (new, + test) | Creates the logins in `NEXREES_USERS` on start; never resets existing users |
 | CI | `.github/workflows/casaos-store.yml`, `pages.yml` | Run only in the upstream repo (they publish HaVeWa's store and site) |
+| CI | `.github/workflows/docker-publish.yml` | Image name lowercased (`NexRees` owner; registry names must be lowercase) |
 | CI (new) | `.github/workflows/nexrees-*.yml` | Weekly upstream sync, staging deploy |
 | AWS | `deploy/aws/` (new) | Terraform for staging and production in AWS Frankfurt |
 
