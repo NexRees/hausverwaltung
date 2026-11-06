@@ -56,7 +56,7 @@ export default async function LoginPage() {
       </div>
 
       <div
-        className="nx-rise relative w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-card/85 p-8 shadow-2xl shadow-black/40 backdrop-blur-xl"
+        className="nx-rise relative w-full max-w-sm space-y-6 rounded-2xl border border-white/15 bg-card/80 p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,.7),0_0_70px_-10px_rgba(70,110,255,.45)] ring-1 ring-white/10 backdrop-blur-2xl"
         style={{ ["--nx-delay" as string]: "900ms" }}
       >
         <div className="space-y-3 text-center">

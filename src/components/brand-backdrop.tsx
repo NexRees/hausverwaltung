@@ -2,7 +2,8 @@
 // Pure CSS and SVG, no client JS. Over graphite: a neural mesh with twinkling nodes and neon data
 // flowing along its links, and in the middle the NexRees N as a sharp neon outline that draws
 // itself, flickers on, sways in 3D, has light chasing around its edge, a scan line sweeping
-// through it and pulses running along its strokes, inside two turning rings.
+// through it and pulses running along its strokes, inside two turning rings. In front of it all
+// sits a frosted glass pane (haze, grain, slow sheen); farther layers are blurred more for depth.
 // Motion stops for people who ask their system for reduced motion.
 // Children with className "nx-rise" fade up one after another (set --nx-delay per child).
 
@@ -60,7 +61,7 @@ const CSS = `
 .nx-glow{position:absolute;border-radius:9999px;filter:blur(110px);will-change:transform}
 .nx-glow-a{width:55vmax;height:55vmax;left:-15vmax;top:-20vmax;background:#2340FF;opacity:.42;animation:nx-drift-a 16s ease-in-out infinite alternate}
 .nx-glow-b{width:45vmax;height:45vmax;right:-15vmax;bottom:-18vmax;background:#22C8FF;opacity:.16;animation:nx-drift-b 20s ease-in-out infinite alternate}
-.nx-mesh{inset:0;width:100%;height:100%}
+.nx-mesh{inset:0;width:100%;height:100%;filter:blur(.6px)}
 .nx-mesh line{stroke:#7B8CFF;stroke-opacity:.16;stroke-width:1}
 .nx-mesh .nx-flow{stroke:#7FE6FF;stroke-opacity:.5;stroke-width:1.3;stroke-dasharray:.1 .9;stroke-linecap:round;filter:url(#nx-mesh-glow);animation:nx-run 2.2s linear infinite}
 .nx-mesh circle{fill:#C9D6FF;animation:nx-twinkle 3s ease-in-out infinite}
@@ -82,12 +83,16 @@ const CSS = `
 .nx-pulse-b{animation-duration:.4s,1.6s;animation-delay:3s,3s}
 .nx-node{fill:#fff;filter:url(#nx-soft);opacity:0;animation:nx-fade-in .3s ease-out 2.4s forwards}
 .nx-node-ring{fill:none;stroke:#4FD8FF;stroke-width:.7;transform-box:fill-box;transform-origin:center;opacity:0;animation:nx-ping 2.2s ease-out 2.6s infinite}
-.nx-calc{position:absolute;inset:0;display:flex;justify-content:space-around;font:500 11px/2.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9FB2FF;opacity:.1;white-space:nowrap;mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent)}
+.nx-calc{position:absolute;inset:0;display:flex;justify-content:space-around;font:500 11px/2.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9FB2FF;opacity:.12;white-space:nowrap;filter:blur(1.4px);mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent)}
 .nx-calc-col{animation:nx-up 60s linear infinite}
 .nx-calc-col span{display:block}
 .nx-calc-col span:nth-child(5n+2){color:#4FD8FF;animation:nx-blink 3.4s steps(1) infinite}
 @keyframes nx-up{from{transform:translateY(0)}to{transform:translateY(-50%)}}
 @keyframes nx-blink{0%,100%{opacity:1}50%{opacity:.25}}
+.nx-glass{position:absolute;inset:0;-webkit-backdrop-filter:blur(1.6px) saturate(1.3);backdrop-filter:blur(1.6px) saturate(1.3);background:linear-gradient(135deg,rgba(220,230,255,.07),rgba(220,230,255,.015) 45%,rgba(79,216,255,.04));box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 0 160px rgba(79,140,255,.12),inset 0 1px 0 rgba(255,255,255,.12);overflow:hidden}
+.nx-glass::before{content:"";position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.06) 47%,rgba(255,255,255,.015) 50%,transparent 56%);animation:nx-sheen 14s ease-in-out infinite}
+.nx-glass::after{content:"";position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes nx-sheen{0%,100%{transform:translateX(-18%)}50%{transform:translateX(18%)}}
 .nx-shade{position:absolute;inset:0;background:radial-gradient(65% 65% at 50% 50%,transparent 45%,rgba(7,8,11,.8) 100%)}
 .nx-rise{opacity:0;animation:nx-rise .8s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:var(--nx-delay,0ms)}
 @keyframes nx-drift-a{to{transform:translate(22%,24%) scale(1.2)}}
@@ -217,6 +222,8 @@ export function BrandBackdrop() {
       </svg>
 
       <div className="nx-shade" />
+      {/* Frosted glass pane between the animation and the person: haze, grain, a slow sheen. */}
+      <div className="nx-glass" />
     </div>
   );
 }
