@@ -43,8 +43,8 @@ what we changed, so every upstream merge stays quick.
 | Staff logins | `prisma/nexrees-users.ts` (new, + test) | Creates the logins in `NEXREES_USERS` on start; never resets existing users |
 | CI | `.github/workflows/casaos-store.yml`, `pages.yml` | Run only in the upstream repo (they publish HaVeWa's store and site) |
 | CI | `.github/workflows/docker-publish.yml` | Image name lowercased (`NexRees` owner; registry names must be lowercase) |
-| CI (new) | `.github/workflows/nexrees-*.yml` | Weekly upstream sync, staging deploy |
-| AWS | `deploy/aws/` (new) | Terraform for staging and production in AWS Frankfurt |
+| CI (new) | `.github/workflows/nexrees-*.yml` | Daily upstream sync, staging deploy, promotion to production (same digest, approval) |
+| AWS | `deploy/aws/` (new) | Terraform for staging and production in AWS Frankfurt; safe deployment profile in its README |
 
 ## Merging upstream
 

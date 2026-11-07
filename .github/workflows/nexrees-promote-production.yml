@@ -1,0 +1,110 @@
+# nexrees: promote what runs on staging to app.nexrees.de. Run by hand:
+#   Actions → Promote to production → Run workflow → tag (e.g. sha-9f91fa5)
+# 1. Resolves the tag to its immutable digest and checks that staging runs exactly that image.
+# 2. Waits for approval (GitHub environment "production": required reviewers).
+# 3. Rolls production to image@digest and waits until it is healthy.
+# Needs repository variables AWS_STAGING_DEPLOY_ROLE and AWS_PRODUCTION_DEPLOY_ROLE.
+name: Promote to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag that runs on staging, e.g. sha-9f91fa5"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  packages: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: vars.AWS_PRODUCTION_DEPLOY_ROLE != ''
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      image: ${{ steps.digest.outputs.image }}
+    steps:
+      - name: Check the tag format
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$TAG" =~ ^sha-[0-9a-f]{7}$ ]] || { echo "::error::tag must look like sha-1a2b3c4"; exit 1; }
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve the tag to its digest
+        id: digest
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          digest=$(docker buildx imagetools inspect "$repo:$TAG" --format '{{json .Manifest}}' | jq -r .digest)
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::could not resolve $repo:$TAG"; exit 1; }
+          echo "image=$repo@$digest" >> "$GITHUB_OUTPUT"
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_STAGING_DEPLOY_ROLE }}
+          aws-region: eu-central-1
+
+      - name: Staging must run exactly this image
+        env:
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ steps.digest.outputs.repo }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          td=$(aws ecs describe-services --cluster nexrees-staging --services app --query 'services[0].taskDefinition' --output text)
+          running=$(aws ecs describe-task-definition --task-definition "$td" --query 'taskDefinition.containerDefinitions[0].image' --output text)
+          echo "staging runs: $running"
+          if [[ "$running" != "$REPO:$TAG" && "$running" != "$REPO@$DIGEST" ]]; then
+            echo "::error::staging does not run $TAG; deploy and check it on staging first"
+            exit 1
+          fi
+          echo "### Promoting \`$TAG\` → \`$REPO@$DIGEST\`" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLUSTER: nexrees-production
+      SERVICE: app
+      FAMILY: nexrees-production
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PRODUCTION_DEPLOY_ROLE }}
+          aws-region: eu-central-1
+
+      - name: Current task definition
+        run: aws ecs describe-task-definition --task-definition "$FAMILY" --query taskDefinition > task.json
+
+      - name: Swap in the staged image (by digest)
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task.json
+          container-name: app
+          image: ${{ needs.verify.outputs.image }}
+
+      - name: Deploy and wait until healthy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.CLUSTER }}
+          service: ${{ env.SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 20

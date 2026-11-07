@@ -1,8 +1,12 @@
-# GitHub Actions deploy role (OIDC, no stored AWS keys). Only the given repository's main
-# branch may assume it, and it may only roll this stack's service to a new task revision.
+# GitHub Actions deploy role (OIDC, no stored AWS keys). Only jobs of the given repository
+# that run in the GitHub environment of the same name (staging / production) may assume it,
+# so that environment's protection rules (branch main; reviewers for production) guard AWS
+# too. The role may only roll this stack's service to a new task revision.
 
 locals {
   ci_enabled = var.github_repository != ""
+  # A job with `environment: X` gets this subject claim from GitHub instead of the branch ref.
+  ci_subject = "repo:${var.github_repository}:environment:${var.environment}"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
@@ -28,7 +32,7 @@ data "aws_iam_policy_document" "ci_assume" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:refs/heads/main"]
+      values   = [local.ci_subject]
     }
   }
 }

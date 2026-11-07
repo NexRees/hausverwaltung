@@ -41,3 +41,8 @@ output "deploy_role_arn" {
 output "documents_bucket" {
   value = aws_s3_bucket.documents.bucket
 }
+
+output "deploy_role_subject" {
+  description = "GitHub OIDC subject the deploy role trusts (jobs with `environment: <this env>`)."
+  value       = local.ci_subject
+}

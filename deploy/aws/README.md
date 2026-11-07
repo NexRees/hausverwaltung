@@ -6,10 +6,40 @@ Terraform for NexRees in AWS Frankfurt (`eu-central-1`). One module, one folder 
 |---|---|
 | `modules/stack` | VPC (2 zones), load balancer with TLS, ECS Fargate app, RDS Postgres 16, S3 documents bucket, KMS key, Secrets Manager, GitHub OIDC deploy role |
 | `envs/staging` | `staging.nexrees.de`, three staff logins |
+| `envs/production` | `app.nexrees.de`: same module, plus Multi-AZ database, 35-day backups, deletion protection |
 | `modules/stack/tests` | Offline security checks: `terraform init -backend=false && terraform test` |
 
-Production (`envs/production`, `app.nexrees.de`) follows once staging works; it reuses the
-module with Multi-AZ, deletion protection and longer backups.
+## Safe deployment profile
+
+The same module runs staging and production; only the values in `envs/<env>/main.tf` differ,
+so whatever works on staging is what production gets. Guard rails:
+
+| Guard | How |
+|---|---|
+| Frankfurt only | Provider, state bucket and CI all use `eu-central-1`; the module refuses to plan in any other region (test `refuses_any_region_but_frankfurt`). Only AWS's global control plane (IAM roles, GitHub OIDC provider, cost budget) has no region, and it holds no customer data. |
+| Right account only | Each env takes `aws_account_id` and sets `allowed_account_ids`: Terraform stops before any change if the logged-in profile is another account. |
+| No root, no long-lived keys | People use an IAM Identity Center profile (`aws configure sso --profile nexrees`); GitHub Actions use OIDC roles, no stored AWS keys. |
+| Deploys scoped to an environment | Each deploy role trusts only jobs in the GitHub environment of the same name (`environment:staging` / `environment:production`), and may only roll its own ECS service. |
+| Same image, proven first | Every commit on `main` builds `sha-<short>` and rolls staging. Production gets an image only via **Promote to production**, which resolves the tag to its digest, checks staging runs exactly that image, waits for approval, then deploys `image@sha256:…`. |
+| Automatic rollback | ECS deployment circuit breaker: a release that never gets healthy is rolled back to the previous revision. |
+| Separate state | `nexrees-hv/staging.tfstate` and `nexrees-hv/production.tfstate` in a private, versioned bucket. |
+| Cost alerts | AWS Budget per env (staging $90, production $150 a month, usage before credits): e-mail at 50 / 80 / 100 % and when the month's forecast passes 100 %. With ~€200 credit, staging alone runs about 2.5 months. |
+| Data | Staging only ever gets demo data or anonymised copies of production, never a raw copy. |
+
+### GitHub settings (once)
+
+- Settings → Environments → `staging`: deployment branches = `main` only.
+- Settings → Environments → `production`: deployment branches = `main` only, **required
+  reviewers** = Abi (and whoever else may release), prevent self-review off for a team of one.
+- Settings → Variables: `AWS_STAGING_DEPLOY_ROLE`, later `AWS_PRODUCTION_DEPLOY_ROLE`
+  (`terraform output -json stack | jq -r .deploy_role_arn`).
+
+### Releasing
+
+1. Merge to `main` → image `sha-<short>` → staging updates by itself.
+2. Check staging.
+3. Actions → **Promote to production** → tag `sha-<short>` → approve → production runs the
+   same digest. To roll back, promote the previous tag.
 
 ## How staging is built
 
@@ -28,8 +58,17 @@ module with Multi-AZ, deletion protection and longer backups.
 
 ## First deploy (once)
 
-Needs: an AWS account owned by NexRees, AWS CLI logged in (`aws login` or SSO),
-Terraform 1.9+, and this repository on GitHub as `NexRees/hausverwaltung`.
+Needs: the NexRees AWS account, AWS CLI profile `nexrees` logged in (`aws configure sso
+--profile nexrees`, then `aws sso login --profile nexrees`), Terraform 1.9+, and this
+repository on GitHub as `NexRees/hausverwaltung`. Every command below uses that profile:
+
+```sh
+export AWS_PROFILE=nexrees
+export TF_VAR_aws_account_id=$(aws sts get-caller-identity --query Account --output text)
+export TF_VAR_budget_emails='["you@nexrees.de"]'
+```
+
+Check that the account ID is the NexRees one before going on.
 
 1. **Image.** In GitHub → Actions, enable workflows for this fork and run **Build and push
    image**. Then GitHub → NexRees → Packages → `hausverwaltung` → Package settings → change

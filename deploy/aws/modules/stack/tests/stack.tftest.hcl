@@ -147,3 +147,36 @@ run "sso_needs_its_secret" {
   }
   expect_failures = [var.sso_client_secret]
 }
+
+run "deploy_role_only_for_the_matching_github_environment" {
+  command = plan
+  assert {
+    condition     = local.ci_subject == "repo:NexRees/hausverwaltung:environment:staging"
+    error_message = "Only jobs in the GitHub environment 'staging' of NexRees/hausverwaltung may deploy staging."
+  }
+}
+
+run "budget_alerts_before_credits" {
+  command = plan
+  variables {
+    budget_emails      = ["ops@nexrees.de"]
+    budget_monthly_usd = 90
+  }
+  assert {
+    condition     = one(aws_budgets_budget.monthly).limit_amount == "90" && one(one(aws_budgets_budget.monthly).cost_types).include_credit == false
+    error_message = "The budget must count usage before credits, so alerts track the credit being spent."
+  }
+  assert {
+    condition     = length(one(aws_budgets_budget.monthly).notification) == 4
+    error_message = "Alerts at 50, 80, 100 % actual and 100 % forecast."
+  }
+}
+
+run "refuses_any_region_but_frankfurt" {
+  command = plan
+  override_data {
+    target = data.aws_region.this
+    values = { name = "eu-west-1" }
+  }
+  expect_failures = [terraform_data.region_guard]
+}
