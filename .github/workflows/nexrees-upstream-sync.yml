@@ -7,6 +7,10 @@
 #   5. Clean merge + green tests: merge it automatically, which deploys to staging (never to
 #      production). Conflicts or red tests: the pull request waits for a person.
 #      Turn auto-merge off with the repository variable UPSTREAM_AUTO_MERGE=false.
+#      Upstream changes to .github/workflows never auto-merge: workflows can reach AWS.
+# Needs secret UPSTREAM_SYNC_TOKEN: a fine-grained token for NexRees/hausverwaltung with
+# Contents, Pull requests, Actions and Workflows = read/write. The built-in token may not
+# push commits that touch workflow files, which every HaVeWa merge does.
 name: Upstream sync
 
 on:
@@ -29,12 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
 
       - name: Mirror upstream main into branch upstream
         run: |
@@ -65,6 +70,8 @@ jobs:
           git switch -c "$branch"
           if git merge --no-ff --no-edit havewa/main -m "Merge HaVeWa ${{ steps.check.outputs.upstream_sha }} into NexRees"; then
             echo "conflicts=" >> "$GITHUB_OUTPUT"
+            wf=$(git diff --name-only HEAD^1 HEAD -- .github/workflows | sed 's/^/- `/; s/$/`/')
+            { echo "workflows<<EOF"; echo "$wf"; echo "EOF"; } >> "$GITHUB_OUTPUT"
           else
             files=$(git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/')
             { echo "conflicts<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
@@ -93,6 +100,7 @@ jobs:
           BRANCH: ${{ steps.merge.outputs.branch }}
           CONFLICTS: ${{ steps.merge.outputs.conflicts }}
           TESTS: ${{ steps.test.outcome }}
+          WORKFLOWS: ${{ steps.merge.outputs.workflows }}
         run: |
           if [ -n "$CONFLICTS" ]; then
             # The merge needs a person: offer the plain upstream branch and name the files.
@@ -110,13 +118,16 @@ jobs:
               status="Merged cleanly, but **tests failed**. If \`src/lib/brand.test.ts\` failed, upstream brought back HaVeWa branding: re-apply the NexRees version (NEXREES.md). Log: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             fi
           fi
+          if [ -n "$WORKFLOWS" ]; then
+            status="$status"$'\n\n'"**Changes GitHub workflows, so a person must review and merge:**"$'\n\n'"$WORKFLOWS"
+          fi
           body="Daily sync from [fgilde/hausverwaltung](https://github.com/fgilde/hausverwaltung) (AGPL-3.0)."$'\n\n'"$status"$'\n\n'"Before merging: check the diff for new HaVeWa names or links, then merge. CI builds the image and deploys it to staging; promote to production after checking staging."
           url=$(gh pr create --head "$head" --base main --title "$title" --body "$body")
           echo "url=$url" >> "$GITHUB_OUTPUT"
         id: pr
 
       - name: Merge automatically when clean and green
-        if: steps.pr.outcome == 'success' && steps.merge.outputs.conflicts == '' && steps.test.outcome == 'success' && vars.UPSTREAM_AUTO_MERGE != 'false'
+        if: steps.pr.outcome == 'success' && steps.merge.outputs.conflicts == '' && steps.test.outcome == 'success' && steps.merge.outputs.workflows == '' && vars.UPSTREAM_AUTO_MERGE != 'false'
         run: |
           gh pr merge "${{ steps.pr.outputs.url }}" --merge --delete-branch
           # A merge made with the workflow token does not start other workflows on its own, so
