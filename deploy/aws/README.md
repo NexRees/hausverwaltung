@@ -16,6 +16,7 @@ so whatever works on staging is what production gets. Guard rails:
 
 | Guard | How |
 |---|---|
+| Frankfurt only | Provider, state bucket and CI all use `eu-central-1`; the module refuses to plan in any other region (test `refuses_any_region_but_frankfurt`). Only AWS's global control plane (IAM roles, GitHub OIDC provider, cost budget) has no region, and it holds no customer data. |
 | Right account only | Each env takes `aws_account_id` and sets `allowed_account_ids`: Terraform stops before any change if the logged-in profile is another account. |
 | No root, no long-lived keys | People use an IAM Identity Center profile (`aws configure sso --profile nexrees`); GitHub Actions use OIDC roles, no stored AWS keys. |
 | Deploys scoped to an environment | Each deploy role trusts only jobs in the GitHub environment of the same name (`environment:staging` / `environment:production`), and may only roll its own ECS service. |

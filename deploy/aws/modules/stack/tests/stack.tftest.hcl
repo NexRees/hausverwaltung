@@ -171,3 +171,12 @@ run "budget_alerts_before_credits" {
     error_message = "Alerts at 50, 80, 100 % actual and 100 % forecast."
   }
 }
+
+run "refuses_any_region_but_frankfurt" {
+  command = plan
+  override_data {
+    target = data.aws_region.this
+    values = { name = "eu-west-1" }
+  }
+  expect_failures = [terraform_data.region_guard]
+}

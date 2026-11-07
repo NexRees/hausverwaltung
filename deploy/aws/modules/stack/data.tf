@@ -194,3 +194,19 @@ resource "aws_secretsmanager_secret_version" "app" {
   secret_id     = aws_secretsmanager_secret.app.id
   secret_string = jsonencode(local.app_secrets)
 }
+
+# Residency guard: everything that holds or processes data (database, documents, logs,
+# secrets, containers, load balancer) lives in Frankfurt only. Plan and apply stop if the
+# provider points at any other region. Only AWS's global control plane (IAM roles, the
+# GitHub OIDC provider, the cost budget) sits outside a region, and none of it holds
+# customer data.
+resource "terraform_data" "region_guard" {
+  input = data.aws_region.this.name
+
+  lifecycle {
+    precondition {
+      condition     = data.aws_region.this.name == "eu-central-1"
+      error_message = "NexRees runs only in AWS Frankfurt (eu-central-1)."
+    }
+  }
+}
