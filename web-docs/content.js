@@ -528,6 +528,7 @@ api: {
     <ul>
       <li>Basis <code>/api/v1</code> — Lesen und Schreiben über alle Module (Objekte, Einheiten, Verträge, Finanzen, Versammlungen, Beschlüsse, Dokumente, WEG, Versicherung, Grundsteuer …).</li>
       <li>Operationen (Sollstellungslauf, Mahnlauf, Mietanpassung anwenden, Bank-Import, E-Mail senden, Dokument-Upload).</li>
+      <li>Dokumente: anlegen über die Operation Dokument-Upload, umhängen und umbenennen per <code>PATCH /api/v1/records/document/{id}</code> (<code>null</code> löst eine Zuordnung), löschen per <code>DELETE</code> (Datei wird mit gelöscht).</li>
       <li>Interaktive Referenz (Scalar) unter <code>/api-reference</code>, OpenAPI unter <code>/api/v1/openapi.json</code>.</li>
     </ul>
     <h3>MCP-Server</h3>
@@ -543,6 +544,7 @@ api: {
     <ul>
       <li>Base <code>/api/v1</code> — read and write across all modules (properties, units, leases, finances, meetings, resolutions, documents, HOA, insurance, property tax …).</li>
       <li>Operations (charge run, dunning run, apply rent adjustment, bank import, send email, upload document).</li>
+      <li>Documents: create via the upload operation, reassign and rename via <code>PATCH /api/v1/records/document/{id}</code> (<code>null</code> removes a link), delete via <code>DELETE</code> (the file is deleted too).</li>
       <li>Interactive reference (Scalar) at <code>/api-reference</code>, OpenAPI at <code>/api/v1/openapi.json</code>.</li>
     </ul>
     <h3>MCP server</h3>
@@ -639,6 +641,8 @@ deploy: {
       <li><strong>Proxmox VE</strong>: Einzeiler auf dem Host legt einen Debian-LXC an:</li>
     </ul>
     <pre><code>bash -c "$(wget -qO- https://raw.githubusercontent.com/fgilde/hausverwaltung/main/deploy/proxmox/install.sh)"</code></pre>
+    <h3>Backup &amp; Wiederherstellung</h3>
+    <p><code>deploy/backup.sh</code> sichert Datenbank, alle Tabellen als CSV, Dokumente und Konfiguration (inkl. <code>AUTH_SECRET</code>) in ein Archiv mit Manifest und Prüfsummen und spielt jedes Backup probeweise in eine Wegwerf-Datenbank ein. <code>backup.sh restore DATEI</code> stellt wieder her (mit Sicherheits-Backup vorher). Die Proxmox-Installation sichert täglich automatisch nach <code>/var/lib/havewa/backups</code>; bei Docker per Cron einplanen. Archive vom Rechner wegkopieren.</p>
     <p>Details in der <a href="https://github.com/fgilde/hausverwaltung#readme" target="_blank" rel="noreferrer">README</a>.</p>`,
   en: `
     <h2>Install &amp; hosting</h2>
@@ -663,6 +667,8 @@ deploy: {
       <li><strong>Proxmox VE</strong>: one-liner on the host creates a Debian LXC:</li>
     </ul>
     <pre><code>bash -c "$(wget -qO- https://raw.githubusercontent.com/fgilde/hausverwaltung/main/deploy/proxmox/install.sh)"</code></pre>
+    <h3>Backup &amp; restore</h3>
+    <p><code>deploy/backup.sh</code> saves the database, every table as CSV, the documents and the configuration (incl. <code>AUTH_SECRET</code>) into one archive with a manifest and checksums, and test-restores every backup into a scratch database. <code>backup.sh restore FILE</code> puts it back (after a safety backup). The Proxmox install backs up daily to <code>/var/lib/havewa/backups</code>; with Docker, schedule it via cron. Copy the archives off the machine.</p>
     <p>Details in the <a href="https://github.com/fgilde/hausverwaltung#readme" target="_blank" rel="noreferrer">README</a>.</p>`
 },
 
