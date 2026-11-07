@@ -16,8 +16,27 @@ terraform {
   }
 }
 
+# Safety: this configuration only ever runs against the NexRees AWS account. Terraform stops
+# before touching anything when the logged-in profile belongs to another account.
+variable "aws_account_id" {
+  description = "12-digit ID of the NexRees AWS account."
+  type        = string
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.aws_account_id))
+    error_message = "aws_account_id must be the 12-digit AWS account ID."
+  }
+}
+
+variable "aws_profile" {
+  description = "AWS CLI profile to use (aws configure sso --profile nexrees)."
+  type        = string
+  default     = "nexrees"
+}
+
 provider "aws" {
-  region = "eu-central-1"
+  region              = "eu-central-1"
+  profile             = var.aws_profile
+  allowed_account_ids = [var.aws_account_id]
   default_tags {
     tags = {
       Project     = "nexrees-hv"
@@ -43,6 +62,22 @@ variable "google_client_secret" {
   type      = string
   default   = ""
   sensitive = true
+}
+
+# Budget alerts. ~€200 credit / staging at ~$70-90 a month ≈ 2.5 months of runway.
+variable "budget_emails" {
+  description = "Who gets the budget alerts (kept out of this public repo; pass with -var or TF_VAR_budget_emails)."
+  type        = list(string)
+  validation {
+    condition     = length(var.budget_emails) > 0
+    error_message = "Give at least one address for the budget alerts."
+  }
+}
+
+# Set when this account already has a GitHub OIDC provider (e.g. production deployed first).
+variable "github_oidc_provider_arn" {
+  type    = string
+  default = ""
 }
 
 variable "allowed_cidrs" {
@@ -81,7 +116,11 @@ module "stack" {
   }
   sso_client_secret = var.google_client_secret
 
-  github_repository = "NexRees/hausverwaltung"
+  github_repository        = "NexRees/hausverwaltung"
+  github_oidc_provider_arn = var.github_oidc_provider_arn
+
+  budget_monthly_usd = 90
+  budget_emails      = var.budget_emails
 }
 
 output "stack" {

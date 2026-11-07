@@ -153,3 +153,19 @@ variable "sso_client_secret" {
     error_message = "sso_client_secret is required when sso is set."
   }
 }
+
+variable "budget_monthly_usd" {
+  description = "Monthly cost budget for NexRees in this account, in USD (AWS budgets are in USD), before credits."
+  type        = number
+  default     = 90
+  validation {
+    condition     = var.budget_monthly_usd > 0
+    error_message = "budget_monthly_usd must be positive."
+  }
+}
+
+variable "budget_emails" {
+  description = "Who gets the budget alerts (50/80/100 % actual, 100 % forecast). Empty = no budget."
+  type        = list(string)
+  default     = []
+}
