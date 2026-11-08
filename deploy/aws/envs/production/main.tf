@@ -121,6 +121,8 @@ module "stack" {
 
   github_repository        = "NexRees/hausverwaltung"
   github_oidc_provider_arn = var.github_oidc_provider_arn
+  # The repository uses GitHub's immutable OIDC subject: pin owner and repository IDs.
+  github_ids = { owner = 349533634, repository = 1448272854 }
 
   # Production durability: standby database in a second zone, 35 days of backups, and no
   # accidental deletion of the database or its final snapshot.

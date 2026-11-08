@@ -6,7 +6,11 @@
 locals {
   ci_enabled = var.github_repository != ""
   # A job with `environment: X` gets this subject claim from GitHub instead of the branch ref.
-  ci_subject = "repo:${var.github_repository}:environment:${var.environment}"
+  # With the immutable subject, owner and repository carry their numeric IDs.
+  ci_repo = var.github_ids == null ? var.github_repository : format("%s@%d/%s@%d",
+    split("/", var.github_repository)[0], var.github_ids.owner,
+  split("/", var.github_repository)[1], var.github_ids.repository)
+  ci_subject = "repo:${local.ci_repo}:environment:${var.environment}"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {

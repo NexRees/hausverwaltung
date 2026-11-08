@@ -156,6 +156,17 @@ run "deploy_role_only_for_the_matching_github_environment" {
   }
 }
 
+run "deploy_role_pins_the_immutable_github_ids" {
+  command = plan
+  variables {
+    github_ids = { owner = 349533634, repository = 1448272854 }
+  }
+  assert {
+    condition     = local.ci_subject == "repo:NexRees@349533634/hausverwaltung@1448272854:environment:staging"
+    error_message = "With GitHub's immutable subject the role must trust the ID-pinned repository only."
+  }
+}
+
 run "budget_alerts_before_credits" {
   command = plan
   variables {
