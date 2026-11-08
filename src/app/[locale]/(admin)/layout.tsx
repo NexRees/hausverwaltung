@@ -55,7 +55,8 @@ export default async function AdminLayout({
       )}
       <AppSidebar logoUrl={logoUrl} superAdmin={user.superAdmin} />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        {/* nexrees: the top bar stays in place while the page scrolls */}
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-6" />
           <SearchBox />

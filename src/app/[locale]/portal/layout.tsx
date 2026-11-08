@@ -30,7 +30,8 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-svh bg-muted/30">
-      <header className="flex h-14 items-center gap-2 border-b bg-background px-4">
+      {/* nexrees: the top bar stays in place while the page scrolls */}
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <Link href="/portal" className="flex items-center gap-2 font-semibold">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icon.png" alt={BRAND.name} className="size-7 rounded-md" />
