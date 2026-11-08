@@ -118,6 +118,8 @@ module "stack" {
 
   github_repository        = "NexRees/hausverwaltung"
   github_oidc_provider_arn = var.github_oidc_provider_arn
+  # The repository uses GitHub's immutable OIDC subject: pin owner and repository IDs.
+  github_ids = { owner = 349533634, repository = 1448272854 }
 
   budget_monthly_usd = 90
   budget_emails      = var.budget_emails

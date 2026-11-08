@@ -113,6 +113,16 @@ variable "github_repository" {
   default     = ""
 }
 
+variable "github_ids" {
+  description = <<-EOT
+    Numeric GitHub owner and repository IDs, for repositories with GitHub's immutable OIDC
+    subject (repo:OWNER@OWNER_ID/REPO@REPO_ID:...). The deploy role then trusts only that
+    exact repository, even if another one later takes over its name. null = plain subject.
+    EOT
+  type        = object({ owner = number, repository = number })
+  default     = null
+}
+
 variable "github_oidc_provider_arn" {
   description = "Existing GitHub OIDC provider ARN in this account; empty = create one."
   type        = string
