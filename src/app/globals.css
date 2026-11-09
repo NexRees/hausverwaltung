@@ -128,6 +128,17 @@
     @apply font-sans;
     color-scheme: light;
   }
+  /* nexrees: no rubber-band bounce at the top or bottom of the page. The bounce dragged the
+     sticky top bar along, so it jumped when a page ended. Inner scroll areas keep theirs. */
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+  /* nexrees: reserve the scrollbar's space, so short and long pages (and open menus, which
+     lock scrolling) don't shift the layout sideways. */
+  html {
+    scrollbar-gutter: stable;
+  }
   /* Native Formular-Elemente (Select-Listen, Datumspicker, Scrollbars) im
      Dark Mode dunkel rendern — sonst zeigt der Browser weiße Options-Listen
      mit heller Schrift (weiß auf weiß). */

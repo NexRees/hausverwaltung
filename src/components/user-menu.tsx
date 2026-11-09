@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-function initials(name?: string | null) {
+export function initials(name?: string | null) {
   if (!name) return "??";
   return name
     .split(" ")
