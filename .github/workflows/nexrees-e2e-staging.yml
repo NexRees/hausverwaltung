@@ -1,0 +1,49 @@
+# nexrees: read-only smoke test of staging after each deploy (e2e/smoke). Creates and changes
+# nothing. Runs on GitHub's runners against the public staging URL; staging itself stays in
+# AWS Frankfurt (eu-central-1).
+#   Repository variable STAGING_URL (e.g. https://staging.nexrees.de). Without it: skipped.
+#   Secrets E2E_SMOKE_EMAIL / E2E_SMOKE_PASSWORD (environment "staging"), a staff login on
+#   staging. Without them only the signed-out checks run.
+name: Staging smoke test
+
+on:
+  workflow_run:
+    workflows: ["Deploy staging"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      vars.STAGING_URL != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    env:
+      E2E_BASE_URL: ${{ vars.STAGING_URL }}
+      E2E_SMOKE_EMAIL: ${{ secrets.E2E_SMOKE_EMAIL }}
+      E2E_SMOKE_PASSWORD: ${{ secrets.E2E_SMOKE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke test
+        run: npm run e2e:smoke
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: staging-smoke-report
+          path: |
+            e2e/.report
+            e2e/.results
+          retention-days: 14
