@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { forbidden, isStaffRole } from "@/lib/staff-access";
 import { actingTenantId } from "@/lib/acting-tenant";
 import { prisma } from "@/lib/prisma";
 import { readFile } from "@/lib/storage";
@@ -9,7 +10,7 @@ import { readFile } from "@/lib/storage";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
-  if (["MIETER", "EIGENTUEMER", "HANDWERKER"].includes(session.user.role)) return new Response("Forbidden", { status: 403 });
+  if (!isStaffRole(session.user.role)) return forbidden(); // nexrees: staff only
 
   const { id } = await params;
   const tenantId = await actingTenantId(session.user);

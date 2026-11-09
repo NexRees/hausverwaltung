@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { openCharges } from "@/server/charge-ledger";
 import { requireUser } from "@/lib/rbac";
+import { isStaffRole } from "@/lib/staff-access";
 import { isAiConfigured, askAssistant } from "@/lib/ai";
 import { computeStatement } from "@/server/statements";
 import { money } from "@/lib/format";
@@ -56,6 +57,7 @@ async function buildContext(tenantId: string) {
 
 export async function askAssistantAction(_prev: AssistantState, fd: FormData): Promise<AssistantState> {
   const user = await requireUser();
+  if (!isStaffRole(user.role)) return { error: "Keine Berechtigung." }; // nexrees: no company data for portal/Beirat
   const question = String(fd.get("question") ?? "").trim();
   if (!question) return { error: "Bitte eine Frage eingeben." };
 
@@ -89,6 +91,7 @@ export async function askAssistantAction(_prev: AssistantState, fd: FormData): P
 /** Erklärt die Betriebskostenabrechnung eines Objekts/Jahres in Klartext. */
 export async function explainStatement(_p: AssistantState, fd: FormData): Promise<AssistantState> {
   const user = await requireUser();
+  if (!isStaffRole(user.role)) return { error: "Keine Berechtigung." }; // nexrees: no company data for portal/Beirat
   const propertyId = String(fd.get("propertyId") ?? "");
   const year = Number(fd.get("year")) || new Date().getFullYear();
   if (!propertyId) return { error: "Kein Objekt" };
