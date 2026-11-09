@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { routing } from "@/i18n/routing";
 import { normalizePostalAddress, postalAddressError } from "@/lib/postal-address";
+import { passwordProblem } from "@/lib/password-policy";
+
+// nexrees: zod adapter for the shared password policy
+function passwordRule(v: string, ctx: z.RefinementCtx) {
+  const problem = passwordProblem(v);
+  if (problem) ctx.addIssue({ code: "custom", message: problem });
+}
 
 // notice: Ergebnis des Postausgangs (#79) für die Rückmeldung im Dialog
 export type ActionState = { ok?: boolean; error?: string; notice?: "sent" | "queued" | "draft" | "failed" };
@@ -313,7 +320,7 @@ export const setupSchema = z.object({
   tenantName: z.string().trim().min(1),
   name: z.string().trim().min(1),
   email: z.string().trim().email(),
-  password: z.string().min(6),
+  password: z.string().superRefine(passwordRule), // nexrees: shared password policy
   locale: z.enum(routing.locales),
   brandColor: optionalStr,
   // optionales erstes Objekt
@@ -398,7 +405,7 @@ const roleEnum = z.enum(["ADMIN", "VERWALTER", "BUCHHALTUNG", "BEIRAT", "EIGENTU
 export const userCreateSchema = z.object({
   name: z.string().trim().min(1),
   email: z.string().trim().email(),
-  password: z.string().min(6),
+  password: z.string().superRefine(passwordRule), // nexrees: shared password policy
   role: roleEnum,
   personId: optionalStr,
 });

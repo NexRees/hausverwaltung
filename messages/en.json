@@ -212,7 +212,7 @@
     "tenantName": "Property management name",
     "tenantNamePlaceholder": "e.g. Sample Property Management Ltd.",
     "adminName": "Your name",
-    "passwordHint": "At least 6 characters.",
+    "passwordHint": "At least 12 characters.",
     "brandColor": "Theme colour",
     "preview": "Preview",
     "submit": "Complete setup",

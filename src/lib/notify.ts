@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/adapters/mailer";
 import type { NotifyKind } from "@/lib/notify-kinds";
 import { BRAND } from "@/lib/brand";
+import { openSecret } from "@/lib/crypto";
 
 type NotificationInput = { title: string; body?: string; link?: string };
 
@@ -36,7 +37,7 @@ export async function notifyByEmail(tenantId: string, kind: NotifyKind, to: stri
     select: { name: true, notifyEmail: true, smtpHost: true, smtpPort: true, smtpUser: true, smtpPassword: true, smtpFrom: true, smtpSecure: true },
   });
   if (!t?.notifyEmail.includes(kind)) return;
-  const cfg = { host: t.smtpHost, port: t.smtpPort, user: t.smtpUser, password: t.smtpPassword, from: t.smtpFrom, secure: t.smtpSecure };
+  const cfg = { host: t.smtpHost, port: t.smtpPort, user: t.smtpUser, password: openSecret(t.smtpPassword), from: t.smtpFrom, secure: t.smtpSecure };
   const base = process.env.APP_URL?.replace(/\/$/, "");
   const body = [n.body ?? "", n.link && base ? `\n${base}${n.link}` : "", `\n— ${t.name} · ${BRAND.name}`].filter(Boolean).join("\n");
   for (const addr of new Set(to.filter(Boolean))) {

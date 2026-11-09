@@ -212,7 +212,7 @@
     "tenantName": "Name der Hausverwaltung",
     "tenantNamePlaceholder": "z. B. Muster Hausverwaltung GmbH",
     "adminName": "Ihr Name",
-    "passwordHint": "Mindestens 6 Zeichen.",
+    "passwordHint": "Mindestens 12 Zeichen.",
     "brandColor": "Theme-Farbe",
     "preview": "Vorschau",
     "submit": "Einrichtung abschließen",

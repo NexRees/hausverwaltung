@@ -8,6 +8,8 @@ import { parseCamt053 } from "@/lib/adapters/bankImport";
 import { isEInvoice, parseEInvoice } from "@/lib/adapters/erechnung";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limit";
 import { openCharges } from "@/server/charge-ledger";
+import { encryptSecret } from "@/lib/crypto";
+import { aiResidencyProblem } from "@/lib/ai";
 
 // Dedizierte Operationen (kein reines CRUD) für REST-API + MCP.
 // Fachlogik gespiegelt aus den Server Actions, aber Bearer-Auth statt Session.
@@ -282,13 +284,16 @@ export const OPERATIONS: Record<string, Op> = {
   },
 
   update_ai_config: {
-    description: "KI-Konfiguration des Mandanten setzen (nur Admin). provider anthropic|openai, baseUrl/model optional, apiKey nur senden zum Ändern.",
-    params: { provider: "anthropic|openai", baseUrl: "optional", model: "optional", apiKey: "optional (nur zum Ändern)" },
+    description: "KI-Konfiguration des Mandanten setzen (nur Admin). provider anthropic|openai|bedrock, baseUrl/model optional, apiKey nur senden zum Ändern. Mit Datenhaltungs-Vorgabe (DATA_RESIDENCY) werden Endpunkte außerhalb der Region abgelehnt.",
+    params: { provider: "anthropic|openai|bedrock", baseUrl: "optional", model: "optional", apiKey: "optional (nur zum Ändern)" },
     adminOnly: true,
     run: async (p, a) => {
+      // nexrees: residency guard + key encrypted at rest (same as the settings form)
+      const problem = aiResidencyProblem({ provider: s(a.provider), baseUrl: s(a.baseUrl), model: s(a.model) });
+      if (problem) throw new ApiWriteError(problem, 400);
       await prisma.tenant.update({
         where: { id: p.tenantId },
-        data: { aiProvider: s(a.provider) ?? null, aiBaseUrl: s(a.baseUrl) ?? null, aiModel: s(a.model) ?? null, ...(s(a.apiKey) ? { aiApiKey: s(a.apiKey) } : {}) },
+        data: { aiProvider: s(a.provider) ?? null, aiBaseUrl: s(a.baseUrl) ?? null, aiModel: s(a.model) ?? null, ...(s(a.apiKey) ? { aiApiKey: encryptSecret(s(a.apiKey)!) } : {}) },
       });
       return { ok: true };
     },
@@ -303,7 +308,7 @@ export const OPERATIONS: Record<string, Op> = {
         where: { id: p.tenantId },
         data: {
           smtpHost: s(a.host) ?? null, smtpPort: a.port != null ? Number(a.port) : null, smtpUser: s(a.user) ?? null,
-          smtpFrom: s(a.from) ?? null, smtpSecure: String(a.secure) === "true", ...(s(a.password) ? { smtpPassword: s(a.password) } : {}),
+          smtpFrom: s(a.from) ?? null, smtpSecure: String(a.secure) === "true", ...(s(a.password) ? { smtpPassword: encryptSecret(s(a.password)!) } : {}),
         },
       });
       return { ok: true };

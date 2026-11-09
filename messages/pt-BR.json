@@ -212,7 +212,7 @@
     "tenantName": "Nome da organização",
     "tenantNamePlaceholder": "ex.: Organização Exemplo Ltda.",
     "adminName": "Seu nome",
-    "passwordHint": "Pelo menos 6 caracteres.",
+    "passwordHint": "Pelo menos 12 caracteres.",
     "brandColor": "Cor do tema",
     "preview": "Pré-visualização",
     "submit": "Concluir configuração",

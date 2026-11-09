@@ -28,6 +28,23 @@ const nextConfig: NextConfig = {
   // pdfkit liest Schrift-/ICC-Daten zur Laufzeit aus node_modules (Briefe als PDF/A, #58);
   // gebündelt zeigen die Pfade ins Leere.
   serverExternalPackages: ["pdfkit"],
+  // nexrees: baseline security headers on every response. No script CSP yet (Next.js inline
+  // scripts need nonces first). No form-action: Chrome applies it to the SSO redirect.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'" },
+        ],
+      },
+    ];
+  },
   // Kommunikationsbereich hieß früher /email (#68); alte Links/Lesezeichen weiterleiten.
   async redirects() {
     return [

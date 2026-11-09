@@ -24,3 +24,27 @@ describe("encryptSecret/decryptSecret", () => {
     expect(() => decryptSecret(broken)).toThrow();
   });
 });
+
+describe("nexrees: openSecret and production key guard", () => {
+  it("reads encrypted and legacy plaintext values", async () => {
+    const { openSecret } = await import("./crypto");
+    expect(openSecret(encryptSecret("smtp-pass"))).toBe("smtp-pass");
+    expect(openSecret("legacy-plain")).toBe("legacy-plain");
+    expect(openSecret(null)).toBeUndefined();
+  });
+
+  it("refuses to encrypt with a weak AUTH_SECRET in production", () => {
+    const env = process.env as Record<string, string | undefined>;
+    const before = { secret: env.AUTH_SECRET, node: env.NODE_ENV };
+    try {
+      env.NODE_ENV = "production";
+      env.AUTH_SECRET = "change-me";
+      expect(() => encryptSecret("x")).toThrow(/AUTH_SECRET/);
+      env.AUTH_SECRET = "x".repeat(48);
+      expect(decryptSecret(encryptSecret("x"))).toBe("x");
+    } finally {
+      env.AUTH_SECRET = before.secret;
+      env.NODE_ENV = before.node;
+    }
+  });
+});

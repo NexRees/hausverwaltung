@@ -5,6 +5,7 @@ import type { SessionUser } from "@/lib/rbac";
 import { sendMail, isMailerConfigured, smtpFromAddress, type MailAttachment, type SmtpConfig } from "@/lib/adapters/mailer";
 import { readFile } from "@/lib/storage";
 import { messageIdFor, refIds } from "@/lib/inbound";
+import { openSecret } from "@/lib/crypto";
 import { setLetterStatus, submitLetter, type LetterOptions, type LetterProvider } from "@/server/letters";
 
 // Postausgang (#79): ausgehende E-Mails und Briefe werden eingeplant und nach der
@@ -22,7 +23,7 @@ export async function smtpConfig(tenantId: string): Promise<SmtpConfig> {
     where: { id: tenantId },
     select: { smtpHost: true, smtpPort: true, smtpUser: true, smtpPassword: true, smtpFrom: true, smtpSecure: true },
   });
-  return { host: t?.smtpHost, port: t?.smtpPort, user: t?.smtpUser, password: t?.smtpPassword, from: t?.smtpFrom, secure: t?.smtpSecure };
+  return { host: t?.smtpHost, port: t?.smtpPort, user: t?.smtpUser, password: openSecret(t?.smtpPassword), from: t?.smtpFrom, secure: t?.smtpSecure };
 }
 
 /** Versandzeitpunkt nach Mandanten-Einstellung; null = nur manuell. */

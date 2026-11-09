@@ -137,6 +137,22 @@ resource "aws_iam_role_policy" "task_documents" {
   })
 }
 
+# AI through AWS Bedrock in this region only, with in-region foundation models (no cross-region
+# inference profiles, which route to other regions). Model access is enabled per account in the
+# Bedrock console; without it the call fails and the app falls back to its rule-based answers.
+resource "aws_iam_role_policy" "task_bedrock" {
+  name = "bedrock-in-region"
+  role = aws_iam_role.task.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["bedrock:InvokeModel"]
+      Resource = "arn:aws:bedrock:${data.aws_region.this.name}::foundation-model/*"
+    }]
+  })
+}
+
 locals {
   environment = merge({
     NODE_ENV          = "production"
@@ -146,6 +162,9 @@ locals {
     APP_URL           = "https://${var.domain}"
     AWS_REGION        = data.aws_region.this.name
     STORAGE_S3_BUCKET = aws_s3_bucket.documents.bucket
+    # Company data may only reach AI endpoints in this region (src/lib/ai-residency.ts):
+    # the Anthropic/OpenAI public APIs are refused, AWS Bedrock must run here.
+    DATA_RESIDENCY    = data.aws_region.this.name
     ADMIN_EMAIL       = local.admin.email
     ADMIN_NAME        = local.admin.name
     TENANT_NAME       = var.tenant_name

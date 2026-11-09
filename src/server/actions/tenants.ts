@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/rbac";
 import { ensureDefaultAccounts } from "@/lib/accounts";
 import { ACTING_TENANT_COOKIE } from "@/lib/acting-tenant";
+import { passwordProblem } from "@/lib/password-policy";
 import type { ActionState } from "@/lib/schemas";
 
 // Neuen Mandanten + ersten Admin anlegen (nur Instanz-Admin).
@@ -18,7 +19,8 @@ export async function createTenant(_p: ActionState, fd: FormData): Promise<Actio
   const password = String(fd.get("adminPassword") ?? "");
   if (!name) return { error: "Mandantenname fehlt" };
   if (!/.+@.+\..+/.test(email)) return { error: "Ungültige E-Mail" };
-  if (password.length < 6) return { error: "Passwort mind. 6 Zeichen" };
+  const weak = passwordProblem(password, email); // nexrees: shared password policy
+  if (weak) return { error: weak };
   if (await prisma.user.findUnique({ where: { email }, select: { id: true } }))
     return { error: "E-Mail bereits vergeben" };
 
