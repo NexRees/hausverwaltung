@@ -855,7 +855,8 @@
     "mailed": "Statement drafts created in the outbox.",
     "explain": "AI: explain statement",
     "explaining": "Explaining…",
-    "explainHint": "Without ANTHROPIC_API_KEY only a short summary is shown."
+    "explainHint": "Without ANTHROPIC_API_KEY only a short summary is shown.",
+    "pdf": "Statement as PDF"
   },
   "costType": {
     "GRUNDSTEUER": "Property tax",
@@ -975,7 +976,13 @@
     "preview": "Preview",
     "edit": "Edit document",
     "linkedTo": "Linked to",
-    "searchPlaceholder": "Search name…"
+    "searchPlaceholder": "Search name…",
+    "previewLoading": "Loading preview…",
+    "previewFailed": "Preview not available. Please download the file.",
+    "previewUnsupported": "No preview for this file type.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "pageCount": "{count, plural, one {# page} other {# pages}}"
   },
   "documentCategory": {
     "VERTRAG": "Contract",

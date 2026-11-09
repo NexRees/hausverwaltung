@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { buildStatement, monthsActiveInYear, type UnitInput, type CostInput } from "@/lib/allocation/statement";
+import { buildStatement, monthsActiveInYear, type UnitInput, type CostInput, type StatementItem } from "@/lib/allocation/statement";
 import { extrapolateConsumption } from "@/lib/allocation/heating-degree-days";
 import type { AllocationMethod } from "@/lib/allocation";
 
@@ -26,6 +26,9 @@ export interface StatementUnit {
   allocated: number;
   prepayment: number;
   balance: number; // >0 Guthaben, <0 Nachzahlung
+  /** nexrees: Einzelaufstellung je Kostenposition und Nutzungszeitraum im Jahr (für das PDF). */
+  items: StatementItem[];
+  period: { from: Date; to: Date } | null; // null = Leerstand
 }
 
 export interface StatementResult {
@@ -136,6 +139,13 @@ export async function computeStatement(
       allocated: line.allocated,
       prepayment: line.prepayment,
       balance: line.balance,
+      items: line.items,
+      period: lease
+        ? {
+            from: lease.startDate > yStart ? lease.startDate : yStart,
+            to: lease.endDate && lease.endDate < yEnd ? lease.endDate : yEnd,
+          }
+        : null,
     };
   });
 
