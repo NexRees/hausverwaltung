@@ -16,7 +16,7 @@ import {
 import { UserDialog, EditUserDialog, ResetPasswordDialog } from "@/components/user-dialogs";
 import { SettingsConfig } from "@/components/settings-config";
 import { BookkeepingConfig } from "@/components/bookkeeping-config";
-import { maxLockDate } from "@/server/ledger";
+import { maxLockMonth } from "@/server/ledger";
 import { OutboxConfig } from "@/components/outbox-config";
 import { NotifyConfig } from "@/components/notify-config";
 import { isMailerConfigured } from "@/lib/adapters/mailer";
@@ -266,7 +266,7 @@ export default async function SettingsPage() {
       content: (
         <BookkeepingConfig
           lockedUntil={tenant.bookingsLockedUntil ? tenant.bookingsLockedUntil.toISOString().slice(0, 10) : null}
-          maxLock={maxLockDate()}
+          maxLock={maxLockMonth()}
           sepa={{ creditorId: tenant.sepaCreditorId, iban: tenant.sepaCreditorIban, bic: tenant.sepaCreditorBic }}
         />
       ),

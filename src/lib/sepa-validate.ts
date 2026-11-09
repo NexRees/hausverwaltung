@@ -28,6 +28,16 @@ export function creditorIdValid(raw: string): boolean {
   return mod97(toDigits(national + id.slice(0, 2) + id.slice(2, 4))) === 1;
 }
 
+/** BIC as the pain.008.001.02 schema accepts it (BICIdentifier pattern). */
 export function bicValid(raw: string): boolean {
-  return /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(raw.replace(/\s+/g, "").toUpperCase());
+  return /^[A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?$/.test(raw.replace(/\s+/g, "").toUpperCase());
+}
+
+/**
+ * Mandatsreferenz (MndtId) as the EPC rulebook and the DK specification allow it: up to 35 of
+ * A-Z a-z 0-9 + ? / - : ( ) . , ' with no blanks, not starting or ending with "/" and no "//".
+ * It is sent exactly as the debtor signed it, so it is checked, never cleaned.
+ */
+export function mandateRefValid(ref: string): boolean {
+  return /^[A-Za-z0-9+?/\-:().,']{1,35}$/.test(ref) && !ref.startsWith("/") && !ref.endsWith("/") && !ref.includes("//");
 }

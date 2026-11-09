@@ -22,10 +22,13 @@ export async function bookStatementCharges(_p: ActionState, fd: FormData): Promi
   const user = await requireWriter();
   const { propertyId, year } = parse(fd);
   if (!propertyId) return { error: "Kein Objekt" };
-  // nexrees: § 556 Abs. 3 BGB: no back payments after the twelve-month deadline
-  if (backPaymentExcluded(year, new Date())) {
+  // nexrees: § 556 Abs. 3 BGB: after the twelve-month deadline a back payment can only be claimed
+  // when the statement reached the tenant in time (or for commercial space, where § 556 does not
+  // apply). The software does not know the delivery date, so the user has to confirm it.
+  const late = backPaymentExcluded(year, new Date());
+  if (late && fd.get("confirmTimely") !== "1") {
     return {
-      error: `Die Abrechnungsfrist für ${year} endete am 31.12.${year + 1} (§ 556 Abs. 3 BGB). Nachzahlungen können in der Regel nicht mehr gefordert werden; Guthaben sind auszuzahlen.`,
+      error: `Die Abrechnungsfrist für ${year} endete am 31.12.${year + 1} (§ 556 Abs. 3 BGB). Nachzahlungen nur buchen, wenn die Abrechnung den Mietern rechtzeitig zugegangen ist; sonst sind sie ausgeschlossen, Guthaben sind auszuzahlen.`,
     };
   }
 
@@ -62,7 +65,10 @@ export async function bookStatementCharges(_p: ActionState, fd: FormData): Promi
     if (locked) return locked;
     created++;
   }
-  if (created > 0) await audit(user, "CREATE", "Charge", null, `${created}× ${desc}`);
+  if (created > 0) {
+    const note = late ? " (nach Fristablauf § 556 Abs. 3 BGB; rechtzeitiger Zugang vom Nutzer bestätigt)" : "";
+    await audit(user, "CREATE", "Charge", null, `${created}× ${desc}${note}`);
+  }
   revalidatePath("/", "layout");
   return created > 0 ? { ok: true } : { error: "Keine offenen Nachzahlungen zu buchen." };
 }

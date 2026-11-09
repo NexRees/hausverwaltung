@@ -40,8 +40,13 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
-          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'" },
         ],
+      },
+      {
+        // Not on the file downloads: those send their own "sandbox" policy for uploaded files
+        // (HTML/SVG must never run scripts in our origin), which this must not replace.
+        source: "/((?!api/documents/|api/inbound-attachments/).*)",
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'" }],
       },
     ];
   },

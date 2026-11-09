@@ -12,6 +12,7 @@ import { verifyMailer } from "@/lib/adapters/mailer";
 import { verifyImap } from "@/lib/adapters/imap";
 import { clampSyncInterval, clampAttachMaxMb } from "@/lib/inbound";
 import type { ActionState } from "@/lib/schemas";
+import { maxLockMonth, monthEnd } from "@/server/ledger";
 
 const str = (v: FormDataEntryValue | null) => {
   const x = String(v ?? "").trim();
@@ -66,7 +67,8 @@ export async function updateNotifyConfig(_p: ActionState, fd: FormData): Promise
 export async function updateStatementDefaults(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireRole(["ADMIN"]);
   const raw = str(fd.get("heatingConsumptionPct"));
-  const pct = raw ? Math.min(100, Math.max(0, parseInt(raw, 10))) : null;
+  // nexrees: §§ 7, 8 HeizkostenV: 50–100 % by consumption (above 70 % only by agreement, § 10)
+  const pct = raw ? Math.min(100, Math.max(50, parseInt(raw, 10) || 70)) : null;
   await prisma.tenant.update({ where: { id: user.tenantId }, data: { heatingConsumptionPct: pct } });
   await audit(user, "UPDATE", "Tenant", user.tenantId, "Abrechnungs-Standards");
   revalidatePath("/", "layout");
@@ -229,22 +231,21 @@ export async function updateBookkeepingConfig(_p: ActionState, fd: FormData): Pr
   return { ok: true };
 }
 
-/** Festschreibung: closes all bookings up to and including the given day. Cannot be undone. */
+/** Festschreibung: closes all bookings up to and including the end of the given month. Cannot be undone. */
 export async function lockBookings(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireRole(["ADMIN"]);
-  const raw = str(fd.get("lockUntil"));
-  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { error: "Bitte ein Datum wählen." };
-  const until = new Date(`${raw}T00:00:00Z`);
-  const today = new Date();
-  if (until.getTime() >= Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())) {
-    return { error: "Festschreiben ist nur für vergangene Tage möglich." };
-  }
+  // nexrees: whole months only (Charges are dated by month; a mid-month lock would freeze the rest
+  // of that month, including NK back payments booked in the current month)
+  const raw = str(fd.get("lockMonth"));
+  if (!raw || !/^\d{4}-(0[1-9]|1[0-2])$/.test(raw)) return { error: "Bitte einen Monat wählen." };
+  if (raw > maxLockMonth()) return { error: "Festschreiben ist nur für abgeschlossene Monate möglich." };
+  const until = monthEnd(raw);
   const t = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { bookingsLockedUntil: true } });
   if (t?.bookingsLockedUntil && until <= t.bookingsLockedUntil) {
     return { error: "Dieser Zeitraum ist bereits festgeschrieben. Ein festgeschriebener Zeitraum kann nicht wieder geöffnet werden." };
   }
   await prisma.tenant.update({ where: { id: user.tenantId }, data: { bookingsLockedUntil: until } });
-  await audit(user, "UPDATE", "Tenant", user.tenantId, `Buchungen festgeschrieben bis ${raw}`);
+  await audit(user, "UPDATE", "Tenant", user.tenantId, `Buchungen festgeschrieben bis ${until.toISOString().slice(0, 10)}`);
   revalidatePath("/", "layout");
   return { ok: true };
 }

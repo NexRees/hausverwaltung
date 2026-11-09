@@ -6,13 +6,16 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:
 
 // nexrees: in production a missing or placeholder AUTH_SECRET must not silently encrypt
 // credentials with a key that is public in this repository.
-const WEAK_SECRETS = new Set(["", "change-me", "havewa-dev-secret-change-me"]);
+// nexrees: the placeholders published in this repository's templates (.env.example,
+// .env.prod.example) are public, whatever their length.
+const WEAK_SECRETS = new Set(["", "change-me", "havewa-dev-secret-change-me", "change-me-generate-a-real-secret"]);
+const PLACEHOLDER = /change-?me|replace-?me|your-secret|example|secret-here/i;
 
 let cached: { secret: string; key: Buffer } | null = null;
 
 function key(): Buffer {
   const env = process.env.AUTH_SECRET ?? "";
-  if (process.env.NODE_ENV === "production" && (WEAK_SECRETS.has(env) || env.length < 32)) {
+  if (process.env.NODE_ENV === "production" && (WEAK_SECRETS.has(env) || PLACEHOLDER.test(env) || env.length < 32)) {
     throw new Error("AUTH_SECRET fehlt oder ist zu schwach (mind. 32 Zeichen) – Secrets können nicht sicher verschlüsselt werden.");
   }
   const secret = env || "havewa-dev-secret-change-me";
@@ -32,7 +35,15 @@ export function isEncryptedSecret(value: string | null | undefined): value is st
  */
 export function openSecret(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
-  return isEncryptedSecret(value) ? decryptSecret(value) : value;
+  if (!isEncryptedSecret(value)) return value;
+  try {
+    return decryptSecret(value);
+  } catch {
+    // e.g. AUTH_SECRET was rotated: treat as "not set" so mail/AI report a missing login through
+    // their normal error paths instead of crashing the caller; the value has to be entered again.
+    console.warn("[crypto] Gespeichertes Zugangsdatum kann nicht entschlüsselt werden (AUTH_SECRET geändert?). Bitte in den Einstellungen neu eingeben.");
+    return undefined;
+  }
 }
 
 export function encryptSecret(plain: string): string {

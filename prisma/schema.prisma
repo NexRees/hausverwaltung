@@ -190,6 +190,7 @@ model Tenant {
   sepaCreditorBic  String?
 
   bankConnector BankConnector?
+  sepaCollections SepaCollection[] // nexrees
 }
 
 model User {
@@ -724,6 +725,40 @@ model SepaMandate {
   createdAt  DateTime @default(now())
 
   @@index([tenantId])
+}
+
+// nexrees: one generated SEPA direct-debit file (pain.008). Its charges are not collected again
+// unless the file is cancelled (it was never submitted to the bank).
+model SepaCollection {
+  id              String               @id @default(cuid())
+  tenantId        String
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  msgId           String
+  collectionDate  DateTime
+  total           Decimal              @db.Decimal(12, 2)
+  count           Int
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime             @default(now())
+  cancelledAt     DateTime?
+  cancelledByName String?
+  items           SepaCollectionItem[]
+
+  @@unique([tenantId, msgId])
+  @@index([tenantId, createdAt])
+}
+
+model SepaCollectionItem {
+  id           String         @id @default(cuid())
+  tenantId     String
+  collectionId String
+  collection   SepaCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  chargeId     String // no foreign key: the record of what was debited outlives the charge
+  mandateId    String
+  endToEndId   String
+
+  @@index([chargeId])
+  @@index([collectionId])
 }
 
 model DunningNotice {

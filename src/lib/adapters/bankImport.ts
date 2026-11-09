@@ -11,6 +11,7 @@ export interface BankEntry {
   reference?: string;
   counterparty?: string; // Zahler (Eingang) bzw. Empfänger (Ausgang), #60
   counterpartyIban?: string;
+  ref?: string; // nexrees: bank reference of the entry (AcctSvcrRef/NtryRef), for dedup
 }
 
 function toArray<T>(v: T | T[] | undefined): T[] {
@@ -42,8 +43,10 @@ export function parseCamt053(xml: string): BankEntry[] {
       const party = tx?.RltdPties?.[side];
       const name = party?.Nm ?? party?.Pty?.Nm;
       const iban = tx?.RltdPties?.[`${side}Acct`]?.Id?.IBAN;
+      const ref = ntry?.AcctSvcrRef ?? tx?.Refs?.AcctSvcrRef ?? ntry?.NtryRef;
       out.push({
         date: String(date).slice(0, 10), amount, direction, reference,
+        ...(ref != null && String(ref).trim() ? { ref: String(ref).trim() } : {}),
         ...(name ? { counterparty: String(name).trim() } : {}),
         ...(iban ? { counterpartyIban: String(iban).replace(/\s/g, "") } : {}),
       });

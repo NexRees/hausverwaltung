@@ -82,7 +82,41 @@ export async function bookAs(
   }
 }
 
-/** Latest day that can be closed: yesterday (YYYY-MM-DD, UTC). */
-export function maxLockDate(now = new Date()): string {
-  return new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
+/** YYYY-MM-DD of a stored lock day, or null. */
+export function lockDay(lock: Date | null | undefined): string | null {
+  return lock ? lock.toISOString().slice(0, 10) : null;
+}
+
+/** True when a booking dated `day` (YYYY-MM-DD or Date) falls into the closed period. */
+export function inClosedPeriod(day: string | Date, lock: Date | null | undefined): boolean {
+  const l = lockDay(lock);
+  if (!l) return false;
+  const d = typeof day === "string" ? day.slice(0, 10) : day.toISOString().slice(0, 10);
+  return d <= l;
+}
+
+const de = (ymd: string) => ymd.split("-").reverse().join(".");
+
+/**
+ * Readable refusal when a booking dated `day` would fall into the closed period, else null.
+ * Lets writers check before they start instead of failing halfway (the trigger stays the backstop).
+ */
+export async function closedPeriodProblem(tenantId: string, day: Date, what: string): Promise<string | null> {
+  const lock = await bookingsLockedUntil(tenantId);
+  if (!inClosedPeriod(day, lock)) return null;
+  return `${what} vom ${de(day.toISOString().slice(0, 10))} liegt im festgeschriebenen Zeitraum (bis ${de(lockDay(lock)!)}) und kann nicht mehr gebucht werden.`;
+}
+
+/**
+ * The period is closed by whole months (Charges are dated by month, so a lock inside a month would
+ * freeze the rest of it). Latest month that can be closed: the previous one (YYYY-MM, UTC).
+ */
+export function maxLockMonth(now = new Date()): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0)).toISOString().slice(0, 7);
+}
+
+/** Last day of a YYYY-MM month (UTC midnight), the stored lock value. */
+export function monthEnd(month: string): Date {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0));
 }

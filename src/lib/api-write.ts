@@ -5,7 +5,7 @@ import type { ApiPrincipal } from "@/lib/api-auth";
 import * as S from "@/lib/schemas";
 import { deleteFile } from "@/lib/storage";
 import { audit } from "@/lib/audit";
-import { depositCapProblem } from "@/lib/deposit";
+import { depositCapFor } from "@/lib/deposit";
 import { costEntryProblem } from "@/lib/betrkv";
 import { asActor, PeriodLockedError, type Actor } from "@/server/ledger";
 
@@ -197,6 +197,7 @@ export async function apiCreate(p: ApiPrincipal, entity: string, body: Record<st
     const created = await db.user.create({
       data: { tenantId, name, email, role, personId: personId ?? null, passwordHash: await bcrypt.hash(password, 10) },
     });
+    await audit(actorOf(p), "CREATE", "User", created.id, `${apiSource(p)}: ${email} (${role})`, apiSource(p)); // nexrees
     return { id: created.id };
   }
 
@@ -206,8 +207,7 @@ export async function apiCreate(p: ApiPrincipal, entity: string, body: Record<st
   }
   if (def.model === "deposit") {
     // nexrees: § 551 Abs. 1 BGB cap, same as the form
-    const l = await db.lease.findFirst({ where: { id: data.leaseId, tenantId }, select: { rentCold: true, unit: { select: { type: true } } } });
-    const capProblem = l ? depositCapProblem(Number(data.amount), Number(l.rentCold), l.unit.type) : null;
+    const capProblem = await depositCapFor(db, tenantId, String(data.leaseId), Number(data.amount));
     if (capProblem) throw new ApiWriteError(capProblem, 422);
   }
 
@@ -232,18 +232,21 @@ export async function apiCreate(p: ApiPrincipal, entity: string, body: Record<st
     const row = await db.lease.create({
       data: { ...rest, tenantId, unitId, ...(customData ? { custom: customData } : {}), renters: { create: { tenantId, personId } } },
     });
+    await audit(actorOf(p), "CREATE", "Lease", row.id, `${apiSource(p)}: ${Object.keys(data).join(", ")}`, apiSource(p)); // nexrees
     return { id: row.id };
   }
 
   if (def.special === "resolution") {
     const last = await db.resolution.findFirst({ where: { propertyId: data.propertyId, tenantId }, orderBy: { number: "desc" }, select: { number: true } });
     const row = await db.resolution.create({ data: { ...data, tenantId, number: (last?.number ?? 0) + 1 } });
+    await audit(actorOf(p), "CREATE", "Resolution", row.id, `${apiSource(p)}: Nr. ${row.number}`, apiSource(p)); // nexrees
     return { id: row.id };
   }
 
   if (def.special === "agenda") {
     const count = await db.agendaItem.count({ where: { meetingId: data.meetingId } });
     const row = await db.agendaItem.create({ data: { ...data, tenantId, position: count + 1 } });
+    await audit(actorOf(p), "CREATE", "AgendaItem", row.id, `${apiSource(p)}: TOP ${row.position}`, apiSource(p)); // nexrees
     return { id: row.id };
   }
 
@@ -290,6 +293,7 @@ export async function apiDelete(p: ApiPrincipal, entity: string, id: string) {
     const actor: SessionUser = { id: p.userId, tenantId: p.tenantId, homeTenantId: p.tenantId, superAdmin: false, role: p.role };
     if (!canDeleteUser(actor, target.role, target.id)) throw new ApiWriteError("Löschen nicht erlaubt", 403);
     await db.user.delete({ where: { id: target.id } });
+    await audit(actorOf(p), "DELETE", "User", id, apiSource(p), apiSource(p)); // nexrees
     return { id, deleted: 1 };
   }
 

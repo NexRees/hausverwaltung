@@ -1377,13 +1377,26 @@
     "taskDone": "Aufgabe „{title}“ erledigt ({name})"
   },
   "nexrees": {
+    "statementLate": {
+      "confirm": "Die Abrechnungsfrist für {year} ist am {deadline} abgelaufen (§ 556 Abs. 3 BGB). Nachzahlungen dürfen nur gebucht werden, wenn die Abrechnung den Mietern rechtzeitig zugegangen ist (bei Gewerberaum gilt die Frist nicht). Bestätigen Sie den rechtzeitigen Zugang?"
+    },
+    "sepa": {
+      "date": "Einzugsdatum",
+      "create": "SEPA-Lastschrift erstellen",
+      "hint": "Eingezogen werden die offenen Sollstellungen der 35 Tage bis zum Einzugsdatum (ohne Mahnung), abzüglich Guthaben. Jede Sollstellung kommt nur in eine Datei. Vorabankündigung an die Mieter nicht vergessen.",
+      "created": "Lastschriftdatei erstellt",
+      "line": "Einzug {date} · {count} Einzüge · {total}",
+      "cancel": "Datei stornieren",
+      "cancelDesc": "Nur stornieren, wenn die Datei nicht bei der Bank eingereicht wurde. Danach können die Sollstellungen erneut eingezogen werden.",
+      "cancelled": "storniert"
+    },
     "bookkeeping": {
       "tab": "Buchhaltung",
       "lockTitle": "Festschreibung (GoBD)",
-      "lockHint": "Buchungen bis einschließlich dieses Tages werden gesperrt: Sollstellungen, Zahlungen, Kosten und Rücklagenbuchungen können dann weder angelegt noch geändert oder gelöscht werden, auch nicht über die API. Korrekturen erfolgen als neue Buchung im offenen Zeitraum. Das lässt sich nicht rückgängig machen.",
+      "lockHint": "Gesperrt werden ganze Monate bis einschließlich des gewählten Monats: Sollstellungen, Zahlungen und Rücklagenbuchungen können dann weder angelegt noch geändert oder gelöscht werden, auch nicht über die API oder den Bank-Abruf. Korrekturen erfolgen als neue Buchung im offenen Zeitraum. Das lässt sich nicht rückgängig machen.",
       "lockedUntil": "Festgeschrieben bis",
       "notLocked": "Noch nichts festgeschrieben.",
-      "lockUntil": "Festschreiben bis einschließlich",
+      "lockUntil": "Festschreiben bis einschließlich Monat",
       "lockButton": "Festschreiben",
       "lockConfirm": "Zeitraum endgültig festschreiben? Das kann nicht rückgängig gemacht werden.",
       "locked": "Festgeschrieben",

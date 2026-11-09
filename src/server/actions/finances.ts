@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireWriter } from "@/lib/rbac";
+import { requireRole, requireWriter, WRITE_ROLES } from "@/lib/rbac";
 import {
   accountSchema,
   chargeSchema,
@@ -19,8 +19,8 @@ import { saveFile } from "@/lib/storage";
 import { money } from "@/lib/format";
 import { dunningFor } from "@/server/dunning";
 import { queueEmails } from "@/server/outbox";
-import { openCharges } from "@/server/charge-ledger";
-import { bookAs } from "@/server/ledger";
+import { bookAs, closedPeriodProblem, uiActor } from "@/server/ledger";
+import { importCamtEntries, camtSummary } from "@/lib/bank-import";
 
 // Standard-Kontenrahmen für den Mandanten anlegen (idempotent).
 export async function seedDefaultAccounts(): Promise<void> {
@@ -91,6 +91,8 @@ export async function generateCharges(_p: ActionState, fd: FormData): Promise<Ac
   const first = new Date(Date.UTC(y, m - 1, 1));
   const last = new Date(Date.UTC(y, m, 0));
   const due = new Date(Date.UTC(y, m - 1, 3));
+  const closed = await closedPeriodProblem(user.tenantId, first, "Sollstellungslauf"); // nexrees
+  if (closed) return fail(closed);
 
   const leases = await prisma.lease.findMany({
     where: {
@@ -154,11 +156,14 @@ export async function updatePaymentDetails(_p: ActionState, fd: FormData): Promi
     if (cnt !== documentIds.length) return fail("Dokument nicht gefunden");
   }
 
-  await prisma.payment.update({
-    where: { id: payment.id },
-    data: { note, documents: { set: documentIds.map((docId) => ({ id: docId })) } },
-  });
-  return done();
+  // nexrees: journaled with the acting user; the note stays editable after a close
+  const locked = await bookAs(user, (tx) =>
+    tx.payment.update({
+      where: { id: payment.id },
+      data: { note, documents: { set: documentIds.map((docId) => ({ id: docId })) } },
+    }),
+  );
+  return locked ?? done();
 }
 
 // --- SEPA-Mandat ---
@@ -171,9 +176,11 @@ export async function createMandate(_p: ActionState, fd: FormData): Promise<Acti
   await prisma.sepaMandate.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
 }
-export async function deleteMandate(fd: FormData): Promise<void> {
+// nexrees: journaled with the acting user (the database keeps the deleted mandate)
+export async function deleteMandate(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.sepaMandate.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const locked = await bookAs(user, (tx) => tx.sepaMandate.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 
@@ -192,37 +199,13 @@ export async function importCamt(_p: ActionState, fd: FormData): Promise<ActionS
   }
   if (entries.length === 0) return fail("Keine Buchungen in der Datei");
 
-  // offene Beträge je Sollstellung für Auto-Matching
-  // nexrees: open charges only (oldest first), computed in Postgres
-  const openMap = (await openCharges(user.tenantId)).map((c) => ({ id: c.id, open: c.open }));
-
-  let matched = 0;
-  for (const e of entries) {
-    let chargeId: string | null = null;
-    if (e.direction === "EINGANG") {
-      const hit = openMap.find((o) => o.open > 0 && Math.abs(o.open - e.amount) < 0.005);
-      if (hit) {
-        chargeId = hit.id;
-        hit.open = 0; // verbraucht
-        matched++;
-      }
-    }
-    await prisma.payment.create({
-      data: {
-        tenantId: user.tenantId,
-        accountId,
-        chargeId,
-        date: new Date(e.date),
-        amount: e.amount,
-        direction: e.direction,
-        reference: e.reference,
-        counterparty: e.counterparty,
-        counterpartyIban: e.counterpartyIban,
-      },
-    });
+  if (accountId && !(await prisma.account.findFirst({ where: { id: accountId, tenantId: user.tenantId }, select: { id: true } }))) {
+    return fail("Konto nicht gefunden");
   }
+  // nexrees: one transaction, dedup, entries in the closed period reported instead of aborting
+  const res = await importCamtEntries(user.tenantId, accountId, entries, uiActor(user));
   revalidatePath("/", "layout");
-  return { ok: true, error: `${entries.length} Buchungen, ${matched} zugeordnet` };
+  return { ok: true, error: camtSummary(res) };
 }
 
 // --- Mahnung: nächste Stufe für überfällige Sollstellung ---
@@ -294,4 +277,18 @@ export async function emailDunning(_p: ActionState, fd: FormData): Promise<Actio
   const notice = await queueEmails(user.tenantId, [msg.id], user);
   revalidatePath("/", "layout");
   return { ok: true, notice };
+}
+
+// nexrees: cancel a SEPA direct-debit file that was never submitted to the bank, so its charges
+// can be collected in a new file. A submitted file must not be cancelled (double debit).
+export async function cancelSepaCollection(fd: FormData): Promise<void | { error: string }> {
+  const user = await requireRole(WRITE_ROLES);
+  const id = String(fd.get("id") ?? "");
+  const res = await prisma.sepaCollection.updateMany({
+    where: { id, tenantId: user.tenantId, cancelledAt: null },
+    data: { cancelledAt: new Date(), cancelledByName: user.name ?? user.email ?? null },
+  });
+  if (res.count === 0) return { error: "Datei nicht gefunden oder bereits storniert." };
+  await audit(user, "UPDATE", "SepaCollection", id, "SEPA-Lastschriftdatei storniert (nicht eingereicht)");
+  revalidatePath("/", "layout");
 }

@@ -34,7 +34,7 @@ export function BookkeepingConfig({
   sepa,
 }: {
   lockedUntil: string | null; // YYYY-MM-DD
-  maxLock: string; // YYYY-MM-DD, yesterday (computed on the server)
+  maxLock: string; // YYYY-MM, previous month (computed on the server)
   sepa: { creditorId: string | null; iban: string | null; bic: string | null };
 }) {
   const t = useTranslations("nexrees.bookkeeping");
@@ -68,8 +68,8 @@ export function BookkeepingConfig({
             }}
           >
             <div className="space-y-1.5">
-              <Label htmlFor="lockUntil">{t("lockUntil")}</Label>
-              <Input id="lockUntil" name="lockUntil" type="date" max={maxLock} min={lockedUntil ?? undefined} required />
+              <Label htmlFor="lockMonth">{t("lockUntil")}</Label>
+              <Input id="lockMonth" name="lockMonth" type="month" max={maxLock} min={lockedUntil?.slice(0, 7)} required />
             </div>
             <div className="flex items-center gap-3">
               <Button type="submit" variant="destructive" disabled={locking}>

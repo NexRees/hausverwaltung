@@ -1377,13 +1377,26 @@
     "taskDone": "Task “{title}” done ({name})"
   },
   "nexrees": {
+    "statementLate": {
+      "confirm": "The statement deadline for {year} ended on {deadline} (§ 556 (3) BGB). Back payments may only be booked if the statement reached the tenants in time (the deadline does not apply to commercial space). Do you confirm timely delivery?"
+    },
+    "sepa": {
+      "date": "Collection date",
+      "create": "Create SEPA direct debit",
+      "hint": "Collects the open charges due in the 35 days up to the collection date (not in dunning), less credits. Each charge goes into one file only. Remember the pre-notification to tenants.",
+      "created": "Direct debit file created",
+      "line": "Collection {date} · {count} debits · {total}",
+      "cancel": "Cancel file",
+      "cancelDesc": "Only cancel if the file was not submitted to the bank. Its charges can then be collected again.",
+      "cancelled": "cancelled"
+    },
     "bookkeeping": {
       "tab": "Bookkeeping",
       "lockTitle": "Period close (GoBD)",
-      "lockHint": "Bookings up to and including this day are locked: charges, payments, costs and reserve bookings can no longer be created, changed or deleted, not even through the API. Corrections are made as new bookings in the open period. This cannot be undone.",
+      "lockHint": "Whole months up to and including the chosen month are locked: charges, payments and reserve bookings can no longer be created, changed or deleted, not even through the API or the bank sync. Corrections are made as new bookings in the open period. This cannot be undone.",
       "lockedUntil": "Closed until",
       "notLocked": "Nothing closed yet.",
-      "lockUntil": "Close up to and including",
+      "lockUntil": "Close up to and including month",
       "lockButton": "Close period",
       "lockConfirm": "Close this period for good? This cannot be undone.",
       "locked": "Closed",

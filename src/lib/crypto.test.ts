@@ -31,6 +31,9 @@ describe("nexrees: openSecret and production key guard", () => {
     expect(openSecret(encryptSecret("smtp-pass"))).toBe("smtp-pass");
     expect(openSecret("legacy-plain")).toBe("legacy-plain");
     expect(openSecret(null)).toBeUndefined();
+    // a value encrypted under another key (rotated AUTH_SECRET) reads as "not set", no crash
+    const tampered = encryptSecret("smtp-pass").slice(0, -4) + "AAAA";
+    expect(openSecret(tampered)).toBeUndefined();
   });
 
   it("refuses to encrypt with a weak AUTH_SECRET in production", () => {
@@ -39,6 +42,8 @@ describe("nexrees: openSecret and production key guard", () => {
     try {
       env.NODE_ENV = "production";
       env.AUTH_SECRET = "change-me";
+      expect(() => encryptSecret("x")).toThrow(/AUTH_SECRET/);
+      env.AUTH_SECRET = "change-me-generate-a-real-secret"; // .env.prod.example, 32 characters
       expect(() => encryptSecret("x")).toThrow(/AUTH_SECRET/);
       env.AUTH_SECRET = "x".repeat(48);
       expect(decryptSecret(encryptSecret("x"))).toBe("x");

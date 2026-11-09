@@ -63,7 +63,20 @@ export function residencyViolation(input: ResidencyInput, env: ResidencyEnv = pr
   if (region !== required) {
     return `AWS Bedrock muss in ${required} laufen (konfiguriert: ${region || "keine Region"}).`;
   }
-  const model = input.model?.trim() ?? "";
+  let model = input.model?.trim() ?? "";
+  // A model can also be given as an ARN: it must be in the same region, and an inference profile
+  // ARN is checked like its id (application inference profiles can wrap cross-region profiles and
+  // are refused, since where they route cannot be checked here).
+  const arn = /^arn:aws[a-z-]*:bedrock:([a-z0-9-]*):[0-9]*:([a-z-]+)\/(.+)$/i.exec(model);
+  if (model.toLowerCase().startsWith("arn:")) {
+    if (!arn) return `Modell-ARN ${model} ist ungültig.`;
+    if (arn[1] !== required) return `Modell ${model} liegt nicht in ${required}.`;
+    const kind = arn[2].toLowerCase();
+    if (kind === "application-inference-profile" || (kind !== "foundation-model" && kind !== "inference-profile")) {
+      return `Modell ${model}: nur Basismodelle oder Inferenzprofile in ${required} sind erlaubt.`;
+    }
+    model = arn[3];
+  }
   const m = CROSS_REGION_PREFIX.exec(model);
   if (m) {
     const euAllowed = env.AI_ALLOW_EU_CROSS_REGION === "true" && m[1].toLowerCase() === "eu";

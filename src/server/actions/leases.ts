@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { bookAs } from "@/server/ledger";
-import { depositCapProblem } from "@/lib/deposit";
+import { depositCapFor } from "@/lib/deposit";
 import { pickCustom } from "@/lib/custom";
 import {
   leaseCreateSchema,
@@ -86,8 +86,7 @@ export async function deleteLease(fd: FormData): Promise<void | { error: string 
 
 // nexrees: § 551 Abs. 1 BGB cap for residential deposits
 async function depositCap(tenantId: string, leaseId: string, amount: number) {
-  const l = await prisma.lease.findFirst({ where: { id: leaseId, tenantId }, select: { rentCold: true, unit: { select: { type: true } } } });
-  return l ? depositCapProblem(amount, Number(l.rentCold), l.unit.type) : null;
+  return depositCapFor(prisma, tenantId, leaseId, amount);
 }
 
 // --- Renter (Mitmieter) ---
@@ -169,12 +168,15 @@ export async function upsertDeposit(_p: ActionState, fd: FormData): Promise<Acti
   if (capProblem) return fail(capProblem);
   const { leaseId, accountId, ...rest } = r.data;
   const data = { ...rest, accountId: accountId || null };
-  await prisma.deposit.upsert({
-    where: { leaseId },
-    create: { ...data, leaseId, tenantId: user.tenantId },
-    update: data,
-  });
-  return done();
+  // nexrees: journaled with the acting user
+  const locked = await bookAs(user, (tx) =>
+    tx.deposit.upsert({
+      where: { leaseId },
+      create: { ...data, leaseId, tenantId: user.tenantId },
+      update: data,
+    }),
+  );
+  return locked ?? done();
 }
 
 // nexrees: journaled with the acting user (the database keeps the deleted record)

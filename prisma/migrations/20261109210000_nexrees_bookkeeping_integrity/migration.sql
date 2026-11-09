@@ -1,9 +1,11 @@
 -- nexrees: bookkeeping integrity (GoBD) and SEPA creditor data.
 --
--- 1. Period close (Festschreibung): Tenant."bookingsLockedUntil". Rows of Charge (period),
---    Payment (date), CostEntry (31 Dec of year) and ReserveTransaction (date) on or before that
---    day can no longer be inserted, changed or deleted, whatever writes them (UI, /api/v1, MCP,
---    bank sync, imports). Payment notes stay editable.
+-- 1. Period close (Festschreibung): Tenant."bookingsLockedUntil", always the last day of a month.
+--    Rows of Charge (period), Payment (date) and ReserveTransaction (date) on or before that day
+--    can no longer be inserted, changed or deleted, whatever writes them (UI, /api/v1, MCP, bank
+--    sync, imports). Payment notes stay editable. CostEntry is not locked: it is the yearly cost
+--    input of the operating cost statement, which is prepared during the following year; its
+--    changes are journaled (2.).
 -- (The AuditLog (tenantId, entity, entityId) index comes from 20261109200000_nexrees_collaboration.)
 -- 2. Change journal: every UPDATE and DELETE of those tables plus Deposit and SepaMandate writes
 --    an AuditLog row with the full before/after image. The acting user comes from the
@@ -21,6 +23,37 @@ ALTER TABLE "SepaMandate" ADD COLUMN "lastCollectedAt" TIMESTAMP(3);
 ALTER TABLE "AuditLog" ADD COLUMN "before" JSONB;
 ALTER TABLE "AuditLog" ADD COLUMN "after" JSONB;
 ALTER TABLE "AuditLog" ADD COLUMN "source" TEXT;
+
+-- SEPA direct-debit files and the charges in them (no charge is collected twice).
+CREATE TABLE "SepaCollection" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "msgId" TEXT NOT NULL,
+    "collectionDate" TIMESTAMP(3) NOT NULL,
+    "total" DECIMAL(12,2) NOT NULL,
+    "count" INTEGER NOT NULL,
+    "createdById" TEXT,
+    "createdByName" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "cancelledAt" TIMESTAMP(3),
+    "cancelledByName" TEXT,
+    CONSTRAINT "SepaCollection_pkey" PRIMARY KEY ("id")
+);
+CREATE TABLE "SepaCollectionItem" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "collectionId" TEXT NOT NULL,
+    "chargeId" TEXT NOT NULL,
+    "mandateId" TEXT NOT NULL,
+    "endToEndId" TEXT NOT NULL,
+    CONSTRAINT "SepaCollectionItem_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "SepaCollection_tenantId_msgId_key" ON "SepaCollection"("tenantId", "msgId");
+CREATE INDEX "SepaCollection_tenantId_createdAt_idx" ON "SepaCollection"("tenantId", "createdAt");
+CREATE INDEX "SepaCollectionItem_chargeId_idx" ON "SepaCollectionItem"("chargeId");
+CREATE INDEX "SepaCollectionItem_collectionId_idx" ON "SepaCollectionItem"("collectionId");
+ALTER TABLE "SepaCollection" ADD CONSTRAINT "SepaCollection_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SepaCollectionItem" ADD CONSTRAINT "SepaCollectionItem_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "SepaCollection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 CREATE OR REPLACE FUNCTION nexrees_purging() RETURNS boolean LANGUAGE sql STABLE AS $$
   SELECT coalesce(current_setting('nexrees.purge', true), '') = 'on'
@@ -46,7 +79,6 @@ CREATE OR REPLACE FUNCTION nexrees_booking_date(tbl text, r jsonb) RETURNS date 
     WHEN 'Charge' THEN (r->>'period')::timestamp::date
     WHEN 'Payment' THEN (r->>'date')::timestamp::date
     WHEN 'ReserveTransaction' THEN (r->>'date')::timestamp::date
-    WHEN 'CostEntry' THEN make_date((r->>'year')::int, 12, 31)
   END
 $$;
 
@@ -62,7 +94,9 @@ BEGIN
   END IF;
 
   rec := to_jsonb(CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END);
-  SELECT "bookingsLockedUntil"::date INTO locked FROM "Tenant" WHERE id = rec->>'tenantId';
+  -- FOR SHARE: a close that runs concurrently waits for this transaction (and vice versa), so no
+  -- booking commits into a period after it was closed.
+  SELECT "bookingsLockedUntil"::date INTO locked FROM "Tenant" WHERE id = rec->>'tenantId' FOR SHARE;
   IF locked IS NULL THEN
     RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
   END IF;
@@ -88,8 +122,6 @@ END $$;
 CREATE TRIGGER nexrees_period_lock BEFORE INSERT OR UPDATE OR DELETE ON "Charge"
   FOR EACH ROW EXECUTE FUNCTION nexrees_period_lock();
 CREATE TRIGGER nexrees_period_lock BEFORE INSERT OR UPDATE OR DELETE ON "Payment"
-  FOR EACH ROW EXECUTE FUNCTION nexrees_period_lock('note');
-CREATE TRIGGER nexrees_period_lock BEFORE INSERT OR UPDATE OR DELETE ON "CostEntry"
   FOR EACH ROW EXECUTE FUNCTION nexrees_period_lock('note');
 CREATE TRIGGER nexrees_period_lock BEFORE INSERT OR UPDATE OR DELETE ON "ReserveTransaction"
   FOR EACH ROW EXECUTE FUNCTION nexrees_period_lock('note');
@@ -129,11 +161,17 @@ CREATE TRIGGER nexrees_journal AFTER UPDATE OR DELETE ON "ReserveTransaction" FO
 CREATE TRIGGER nexrees_journal AFTER UPDATE OR DELETE ON "Deposit" FOR EACH ROW EXECUTE FUNCTION nexrees_journal();
 CREATE TRIGGER nexrees_journal AFTER UPDATE OR DELETE ON "SepaMandate" FOR EACH ROW EXECUTE FUNCTION nexrees_journal();
 
--- The period close only moves forward (a closed period is never reopened).
+-- The period close only moves forward (a closed period is never reopened) and closes whole months.
 CREATE OR REPLACE FUNCTION nexrees_lock_forward_only() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF nexrees_purging() THEN
     RETURN NEW;
+  END IF;
+  IF NEW."bookingsLockedUntil" IS NOT NULL
+     AND NEW."bookingsLockedUntil"::date + 1 <> date_trunc('month', NEW."bookingsLockedUntil"::date + 1)::date THEN
+    RAISE EXCEPTION 'NEXREES_LOCK_MONTH_END: Festgeschrieben wird bis zum Ende eines Monats (nicht %)',
+      to_char(NEW."bookingsLockedUntil", 'DD.MM.YYYY')
+      USING ERRCODE = 'P0001';
   END IF;
   IF OLD."bookingsLockedUntil" IS NOT NULL
      AND (NEW."bookingsLockedUntil" IS NULL OR NEW."bookingsLockedUntil" < OLD."bookingsLockedUntil") THEN

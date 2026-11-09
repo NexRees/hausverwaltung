@@ -6,6 +6,8 @@
 // creditor data per company (validated), one payment block per sequence type (FRST/RCUR), unique
 // end-to-end ids, field lengths of the DK specification, TARGET2 business days.
 
+import { mandateRefValid } from "@/lib/sepa-validate";
+
 export type SeqType = "FRST" | "RCUR";
 
 export interface SepaEntry {
@@ -31,10 +33,47 @@ function esc(s: string): string {
   return s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!);
 }
 
-/** Characters allowed by the DK SEPA character set (incl. German umlauts); others become a blank. */
+const ALLOWED = /[A-Za-z0-9 /?:().,'+\-ÄÖÜäöüß&*$%]/;
+
+// Letters that do not decompose into a Latin base letter, plus Cyrillic and Greek (simple
+// transliteration, as banks print them). Upper case; lower case is derived.
+const TRANSLIT: Record<string, string> = {
+  Ł: "L", Ø: "O", Æ: "AE", Œ: "OE", Đ: "D", Ð: "D", Þ: "TH", ẞ: "SS", Ħ: "H", Ŀ: "L", Ŋ: "N", ı: "i",
+  А: "A", Б: "B", В: "V", Г: "G", Ґ: "G", Д: "D", Ђ: "DJ", Е: "E", Ё: "E", Є: "YE", Ж: "ZH", З: "Z", И: "I", І: "I",
+  Ї: "YI", Й: "Y", Ј: "J", К: "K", Л: "L", Љ: "LJ", М: "M", Н: "N", Њ: "NJ", О: "O", П: "P", Р: "R", С: "S",
+  Т: "T", Ћ: "C", У: "U", Ў: "U", Ф: "F", Х: "KH", Ц: "TS", Ч: "CH", Џ: "DZ", Ш: "SH", Щ: "SHCH", Ъ: "", Ы: "Y",
+  Ь: "", Э: "E", Ю: "YU", Я: "YA",
+  Α: "A", Β: "V", Γ: "G", Δ: "D", Ε: "E", Ζ: "Z", Η: "I", Θ: "TH", Ι: "I", Κ: "K", Λ: "L", Μ: "M", Ν: "N",
+  Ξ: "X", Ο: "O", Π: "P", Ρ: "R", Σ: "S", Τ: "T", Υ: "Y", Φ: "F", Χ: "CH", Ψ: "PS", Ω: "O",
+};
+for (const [k, v] of Object.entries(TRANSLIT)) {
+  const lower = k.toLowerCase();
+  if (lower !== k && !(lower in TRANSLIT)) TRANSLIT[lower] = v.toLowerCase();
+}
+TRANSLIT["ς"] = "s";
+
+function latin(ch: string, next: string | undefined): string {
+  if (ALLOWED.test(ch)) return ch;
+  const t = TRANSLIT[ch];
+  if (t !== undefined) {
+    // "Жуков" → "Zhukov", not "ZHukov"
+    return t.length > 1 && ch !== ch.toLowerCase() && next && next !== next.toUpperCase() ? t[0] + t.slice(1).toLowerCase() : t;
+  }
+  const base = ch.normalize("NFD").replace(/\p{M}/gu, ""); // é → e, Ç → C, Ş → S
+  if (base && [...base].every((c) => ALLOWED.test(c))) return base;
+  const viaTable = [...base].map((c) => TRANSLIT[c] ?? "").join(""); // ǿ → ø → o
+  return viaTable || " ";
+}
+
+/**
+ * Text in the DK SEPA character set (incl. German umlauts): other Latin letters lose their
+ * accents, Cyrillic and Greek are transliterated, anything else becomes a blank.
+ */
 export function sepaText(s: string, max: number): string {
-  return s
-    .replace(/[^A-Za-z0-9 /?:().,'+\-ÄÖÜäöüß&*$%]/g, " ")
+  const chars = [...s];
+  return chars
+    .map((ch, i) => latin(ch, chars[i + 1]))
+    .join("")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max);
@@ -81,6 +120,9 @@ export function toPain008(
   opts: { creditor: SepaCreditor; msgId: string; createdAt: Date; collectionDate: Date },
 ): string {
   const { creditor } = opts;
+  // The mandate reference goes out exactly as signed; the caller checks it (mandateRefValid).
+  const bad = entries.find((e) => !mandateRefValid(e.mandateRef) || !sepaText(e.debtorName, 70));
+  if (bad) throw new Error(`SEPA: Mandat ${bad.mandateRef} hat eine ungültige Referenz oder keinen druckbaren Namen`);
   const total = entries.reduce((a, e) => a + cents(e.amount), 0);
   const agent = (bic?: string | null) =>
     bic ? `<FinInstnId><BIC>${esc(bic)}</BIC></FinInstnId>` : `<FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId>`;
@@ -95,7 +137,7 @@ export function toPain008(
           (e) => `      <DrctDbtTxInf>
         <PmtId><EndToEndId>${esc(sepaText(e.endToEndId, 35))}</EndToEndId></PmtId>
         <InstdAmt Ccy="EUR">${fmt(cents(e.amount))}</InstdAmt>
-        <DrctDbtTx><MndtRltdInf><MndtId>${esc(sepaText(e.mandateRef, 35))}</MndtId><DtOfSgntr>${ymd(e.mandateSignedAt)}</DtOfSgntr></MndtRltdInf></DrctDbtTx>
+        <DrctDbtTx><MndtRltdInf><MndtId>${esc(e.mandateRef)}</MndtId><DtOfSgntr>${ymd(e.mandateSignedAt)}</DtOfSgntr></MndtRltdInf></DrctDbtTx>
         <DbtrAgt>${agent(e.bic)}</DbtrAgt>
         <Dbtr><Nm>${esc(sepaText(e.debtorName, 70))}</Nm></Dbtr>
         <DbtrAcct><Id><IBAN>${esc(e.iban)}</IBAN></Id></DbtrAcct>
@@ -134,4 +176,9 @@ ${txs}
 ${blocks}
   </CstmrDrctDbtInitn>
 </Document>`;
+}
+
+/** Earliest collection date for a file created now (YYYY-MM-DD), for forms. */
+export function earliestCollectionDay(): string {
+  return earliestCollectionDate(new Date()).toISOString().slice(0, 10);
 }

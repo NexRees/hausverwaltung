@@ -39,6 +39,18 @@ describe("residencyViolation", () => {
     expect(residencyViolation({ ...base, model: "global.anthropic.claude-x" }, euOk)).toMatch(/regionsübergreifend/);
   });
 
+  it("checks models given as ARNs: same region, and inference profiles like their ids", () => {
+    const base = { provider: "bedrock", region: "eu-central-1" };
+    const fm = "arn:aws:bedrock:eu-central-1::foundation-model/anthropic.claude-x";
+    expect(residencyViolation({ ...base, model: fm }, FRA)).toBeNull();
+    expect(residencyViolation({ ...base, model: fm.replace("eu-central-1", "us-east-1") }, FRA)).toMatch(/nicht in eu-central-1/);
+    const ip = "arn:aws:bedrock:eu-central-1:123456789012:inference-profile/eu.anthropic.claude-x";
+    expect(residencyViolation({ ...base, model: ip }, FRA)).toMatch(/regionsübergreifend/);
+    const app = "arn:aws:bedrock:eu-central-1:123456789012:application-inference-profile/abc123";
+    expect(residencyViolation({ ...base, model: app }, FRA)).toMatch(/nur Basismodelle/);
+    expect(residencyViolation({ ...base, model: "arn:nonsense" }, FRA)).toMatch(/ungültig/);
+  });
+
   it("refuses unknown providers", () => {
     expect(residencyViolation({ provider: "mystery" }, FRA)).toMatch(/Unbekannter/);
   });

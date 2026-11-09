@@ -102,7 +102,9 @@ export async function computeStatement(
   const tenantPct = property?.tenant.heatingConsumptionPct ?? null;
   const costInputs: CostInput[] = costs.map((c) => {
     const heating = c.type === "HEIZUNG" || c.type === "WARMWASSER";
-    const pct = c.consumptionSharePct ?? tenantPct;
+    // nexrees: §§ 7, 8 HeizkostenV, also for old rows and the company default: 50–100 %
+    const raw = c.consumptionSharePct ?? tenantPct;
+    const pct = raw == null ? null : Math.min(100, Math.max(50, raw));
     return {
       id: c.id,
       amount: Number(c.amount),

@@ -45,6 +45,22 @@ describe("pain.008", () => {
     expect(sepaText("Müller <&> GmbH ✓ #1", 70)).toBe("Müller & GmbH 1");
     expect(sepaText("x".repeat(200), 140)).toHaveLength(140);
   });
+
+  it("transliterates names instead of dropping letters", () => {
+    expect(sepaText("Łukasz Çelik", 70)).toBe("Lukasz Celik");
+    expect(sepaText("José Ørsted", 70)).toBe("Jose Orsted");
+    expect(sepaText("Иван Петров", 70)).toBe("Ivan Petrov");
+    expect(sepaText("Жуков", 70)).toBe("Zhukov");
+    expect(sepaText("Σωκράτης", 70)).toBe("Sokratis");
+    expect(sepaText("王小明", 70)).toBe(""); // caller refuses the mandate
+  });
+
+  it("sends the mandate reference exactly as signed and refuses an invalid one", () => {
+    const opts = { creditor, msgId: "MSG", createdAt: new Date("2026-11-09T10:00:00Z"), collectionDate: new Date("2026-11-12T00:00:00Z") };
+    expect(toPain008([{ ...entry(1, "RCUR", 10), mandateRef: "M-2026/0001" }], opts)).toContain("<MndtId>M-2026/0001</MndtId>");
+    expect(() => toPain008([{ ...entry(1, "RCUR", 10), mandateRef: "MND 0001" }], opts)).toThrow(/Mandat/);
+    expect(() => toPain008([{ ...entry(1, "RCUR", 10), debtorName: "王小明" }], opts)).toThrow(/Mandat/);
+  });
 });
 
 describe("collection dates", () => {

@@ -20,3 +20,26 @@ describe("SEPA identifiers", () => {
     expect(bicValid("COBA")).toBe(false);
   });
 });
+
+describe("nexrees: BIC and mandate reference as the bank checks them", () => {
+  it("accepts BICs only in the pain.008 schema pattern", async () => {
+    const { bicValid } = await import("./sepa-validate");
+    expect(bicValid("COBADEFFXXX")).toBe(true);
+    expect(bicValid("MARKDEF1100")).toBe(true);
+    expect(bicValid("DEUTDEFF")).toBe(true);
+    expect(bicValid("ABCDEF10")).toBe(false); // 7th char 0/1 not allowed
+    expect(bicValid("ABCDEF2O")).toBe(false); // 8th char O not allowed
+  });
+
+  it("checks the mandate reference instead of cleaning it", async () => {
+    const { mandateRefValid } = await import("./sepa-validate");
+    expect(mandateRefValid("M-2026/0001")).toBe(true);
+    expect(mandateRefValid("MND 0001")).toBe(false); // blank
+    expect(mandateRefValid("MND_0001")).toBe(false); // underscore
+    expect(mandateRefValid("MÜLLER03")).toBe(false); // umlaut
+    expect(mandateRefValid("/M1")).toBe(false);
+    expect(mandateRefValid("M1/")).toBe(false);
+    expect(mandateRefValid("M//1")).toBe(false);
+    expect(mandateRefValid("x".repeat(36))).toBe(false);
+  });
+});

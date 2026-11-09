@@ -14,3 +14,18 @@ describe("periodLockMessage", () => {
     expect(periodLockMessage(new Error("other"))).toBeNull();
   });
 });
+
+describe("month-granular period close", () => {
+  it("closes whole months up to the previous one", async () => {
+    const { maxLockMonth, monthEnd, inClosedPeriod } = await import("./ledger");
+    expect(maxLockMonth(new Date("2026-11-09T12:00:00Z"))).toBe("2026-10");
+    expect(maxLockMonth(new Date("2026-01-01T00:30:00Z"))).toBe("2025-12");
+    expect(monthEnd("2026-02").toISOString().slice(0, 10)).toBe("2026-02-28");
+    expect(monthEnd("2028-02").toISOString().slice(0, 10)).toBe("2028-02-29");
+    const lock = monthEnd("2026-10");
+    expect(inClosedPeriod("2026-10-31", lock)).toBe(true);
+    expect(inClosedPeriod("2026-11-01", lock)).toBe(false);
+    expect(inClosedPeriod(new Date("2026-10-01T00:00:00Z"), lock)).toBe(true);
+    expect(inClosedPeriod("2020-01-01", null)).toBe(false);
+  });
+});

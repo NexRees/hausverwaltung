@@ -2,7 +2,7 @@ import { z } from "zod";
 import { routing } from "@/i18n/routing";
 import { normalizePostalAddress, postalAddressError } from "@/lib/postal-address";
 import { passwordProblem } from "@/lib/password-policy";
-import { ibanValid, normalizeIban } from "@/lib/sepa-validate";
+import { ibanValid, normalizeIban, mandateRefValid } from "@/lib/sepa-validate";
 
 // nexrees: zod adapter for the shared password policy
 function passwordRule(v: string, ctx: z.RefinementCtx) {
@@ -226,7 +226,7 @@ export const mandateSchema = z.object({
     .trim()
     .min(1)
     .max(35, "Mandatsreferenz: höchstens 35 Zeichen")
-    .regex(/^[A-Za-z0-9+?/\-:().,' ]+$/, "Mandatsreferenz: nur A–Z, 0–9 und + ? / - : ( ) . , '"),
+    .refine(mandateRefValid, "Mandatsreferenz: nur A–Z, 0–9 und + ? / - : ( ) . , ' ohne Leerzeichen; kein / am Anfang oder Ende, kein //"),
   signedDate: z.coerce.date().refine((d) => d.getTime() <= Date.now() + 86_400_000, "Unterschriftsdatum liegt in der Zukunft"),
 });
 
