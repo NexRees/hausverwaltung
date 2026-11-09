@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
 import * as eb from "@/lib/adapters/enablebanking";
+import { openCharges } from "@/server/charge-ledger";
 
 // Bank-Sync ohne Auth-Bezug: genutzt von „Konten synchronisieren“ (manuell) und
 // vom täglichen Hintergrund-Job (#54).
@@ -22,8 +23,8 @@ export async function syncLink(tenantId: string, linkId: string, conn: eb.Connec
   const raw = await eb.getTransactions(conn, link.accountUid, from.toISOString().slice(0, 10));
 
   // Offene Sollstellungen für Auto-Zuordnung (wie camt.053-Import).
-  const charges = await prisma.charge.findMany({ where: { tenantId }, include: { payments: { select: { amount: true } } } });
-  const openMap = charges.map((c) => ({ id: c.id, open: Number(c.amount) - c.payments.reduce((a, p) => a + Number(p.amount), 0) }));
+  // nexrees: open charges only (oldest first), computed in Postgres
+  const openMap = (await openCharges(tenantId)).map((c) => ({ id: c.id, open: c.open }));
 
   let imported = 0;
   let matched = 0;

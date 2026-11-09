@@ -1245,3 +1245,11 @@ model PropertyTax {
 
   @@index([tenantId])
 }
+
+// nexrees: lease that picks one app instance to run the background jobs (IMAP, bank, letters,
+// outbox, notifications), so running 2+ instances does not run every job twice.
+model JobLease {
+  name      String   @id
+  holder    String
+  expiresAt DateTime
+}

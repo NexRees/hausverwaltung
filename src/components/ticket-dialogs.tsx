@@ -10,6 +10,7 @@ import {
   createMaintenance,
 } from "@/server/actions/maintenance";
 
+// nexrees: option props may name a shared list (components/shared-options.tsx)
 type Opt = { value: string; label: string };
 const today = () => new Date().toISOString().slice(0, 10);
 const iso = (d?: Date | null) => (d ? d.toISOString().slice(0, 10) : undefined);
@@ -41,10 +42,10 @@ export async function TicketDialog({
   users,
   ticket,
 }: {
-  properties: Opt[];
-  units: Opt[];
-  contractors: Opt[];
-  users: Opt[];
+  properties: Opt[] | string;
+  units: Opt[] | string;
+  contractors: Opt[] | string;
+  users: Opt[] | string;
   ticket?: TicketData;
 }) {
   const t = await getTranslations();
@@ -52,7 +53,6 @@ export async function TicketDialog({
   const prioOpts = await opts("ticketPriority", ["NIEDRIG", "MITTEL", "HOCH"]);
   const statusOpts = await opts("ticketStatus", ["OFFEN", "IN_ARBEIT", "WARTEND", "ERLEDIGT"]);
   const catOpts = await opts("ticketCategory", ["STOERUNG", "SCHADEN", "WARTUNG", "RECHNUNG", "VERTRAG", "SONSTIGES"]);
-  const none = (arr: Opt[], label: string) => [{ value: "", label }, ...arr];
 
   return (
     <CrudDialog
@@ -86,10 +86,10 @@ export async function TicketDialog({
         <TextField name="dueDate" label={t("tickets.dueDate")} type="date" required={false} defaultValue={iso(ticket?.dueDate)} />
         <TextField name="reminderDate" label={t("tickets.reminder")} type="date" required={false} defaultValue={iso(ticket?.reminderDate)} />
       </div>
-      <SelectField name="assigneeId" label={t("tickets.assignee")} defaultValue={ticket?.assigneeId ?? ""} options={none(users, t("tickets.unassigned"))} />
-      <SelectField name="propertyId" label={t("tickets.property")} defaultValue={ticket?.propertyId ?? ""} options={none(properties, t("common.none"))} />
-      <SelectField name="unitId" label={t("tickets.unit")} defaultValue={ticket?.unitId ?? ""} options={none(units, t("common.none"))} />
-      <SelectField name="contractorId" label={t("tickets.contractor")} defaultValue={ticket?.contractorId ?? ""} options={none(contractors, t("tickets.unassigned"))} />
+      <SelectField name="assigneeId" label={t("tickets.assignee")} defaultValue={ticket?.assigneeId ?? ""} options={users} leading={[{ value: "", label: t("tickets.unassigned") }]} />
+      <SelectField name="propertyId" label={t("tickets.property")} defaultValue={ticket?.propertyId ?? ""} options={properties} leading={[{ value: "", label: t("common.none") }]} />
+      <SelectField name="unitId" label={t("tickets.unit")} defaultValue={ticket?.unitId ?? ""} options={units} leading={[{ value: "", label: t("common.none") }]} />
+      <SelectField name="contractorId" label={t("tickets.contractor")} defaultValue={ticket?.contractorId ?? ""} options={contractors} leading={[{ value: "", label: t("tickets.unassigned") }]} />
     </CrudDialog>
   );
 }

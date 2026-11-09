@@ -12,6 +12,7 @@ import {
   addRenter,
 } from "@/server/actions/leases";
 
+// nexrees: option props may name a shared list (components/shared-options.tsx)
 type Opt = { value: string; label: string };
 const iso = (d?: Date | null) => (d ? d.toISOString().slice(0, 10) : undefined);
 
@@ -49,8 +50,8 @@ export async function LeaseDialog({
   triggerLabel,
   customDefs = [],
 }: {
-  units?: Opt[];
-  persons?: Opt[];
+  units?: Opt[] | string;
+  persons?: Opt[] | string;
   lease?: LeaseData;
   presetUnitId?: string; // Einheit vorbelegt+gesperrt (von Unit-Detail)
   presetPersonId?: string; // Person vorbelegt+gesperrt (von Person-Detail)
@@ -255,7 +256,7 @@ export async function DepositDialog({
   );
 }
 
-export async function RenterDialog({ leaseId, persons }: { leaseId: string; persons: Opt[] }) {
+export async function RenterDialog({ leaseId, persons }: { leaseId: string; persons: Opt[] | string }) {
   const t = await getTranslations();
   return (
     <CrudDialog

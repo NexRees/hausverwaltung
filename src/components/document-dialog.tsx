@@ -6,6 +6,7 @@ import { TextField, SelectField } from "@/components/form-fields";
 import { uploadDocument, updateDocument } from "@/server/actions/documents";
 import { DOCUMENT_CATEGORIES as CATS } from "@/lib/schemas";
 
+// nexrees: option props may name a shared list (components/shared-options.tsx)
 type Opt = { value: string; label: string };
 
 type DocData = {
@@ -23,9 +24,9 @@ export async function DocumentDialog({
   persons,
   doc,
 }: {
-  properties: Opt[];
-  units: Opt[];
-  persons: Opt[];
+  properties: Opt[] | string;
+  units: Opt[] | string;
+  persons: Opt[] | string;
   doc?: DocData; // gesetzt = Bearbeiten statt Hochladen
 }) {
   const t = await getTranslations();
@@ -66,19 +67,22 @@ export async function DocumentDialog({
       <SelectField
         name="propertyId"
         label={t("documents.property")}
-        options={[{ value: "", label: t("documents.allProperties") }, ...properties]}
+        options={properties}
+        leading={[{ value: "", label: t("documents.allProperties") }]}
         defaultValue={doc?.propertyId ?? ""}
       />
       <SelectField
         name="unitId"
         label={t("documents.unit")}
-        options={[{ value: "", label: t("common.none") }, ...units]}
+        options={units}
+        leading={[{ value: "", label: t("common.none") }]}
         defaultValue={doc?.unitId ?? ""}
       />
       <SelectField
         name="personId"
         label={t("documents.person")}
-        options={[{ value: "", label: t("common.none") }, ...persons]}
+        options={persons}
+        leading={[{ value: "", label: t("common.none") }]}
         defaultValue={doc?.personId ?? ""}
       />
     </CrudDialog>

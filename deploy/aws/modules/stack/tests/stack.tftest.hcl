@@ -85,6 +85,15 @@ run "app_only_behind_the_load_balancer" {
   }
 }
 
+run "node_heap_limit_below_task_memory" {
+  command = plan
+
+  assert {
+    condition     = local.environment.NODE_OPTIONS == "--max-old-space-size=768"
+    error_message = "Node's heap must stop at 75% of the 1024 MB task so ECS does not kill the container first."
+  }
+}
+
 run "three_staff_logins_with_admin_first" {
   command = plan
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isSyncDue } from "@/lib/inbound";
 import { syncTenantInbox } from "@/lib/inbound-sync";
+import { acquireLease } from "@/lib/job-lease";
 
 // Hintergrund-Job für den automatischen IMAP-Abruf (#39). Läuft im App-Server
 // (gestartet über instrumentation.ts) und prüft jede Minute, welche Mandanten
@@ -20,6 +21,7 @@ async function tick() {
   if (g.__havewaInboundRunning) return; // kein Überlappen langsamer Läufe
   g.__havewaInboundRunning = true;
   try {
+    if (!(await acquireLease())) return; // another instance runs the jobs (nexrees: job-lease.ts)
     const tenants = await prisma.tenant.findMany({
       where: { imapAutoSync: true, imapHost: { not: null }, imapUser: { not: null } },
       select: { id: true, lastInboundSyncAt: true, imapSyncIntervalMin: true },

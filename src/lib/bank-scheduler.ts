@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { syncTenantBank } from "@/lib/bank-sync";
+import { acquireLease } from "@/lib/job-lease";
 
 // Täglicher Bank-Sync (#54). Bewusst höchstens einmal pro Tag je Mandant: der
 // Open-Banking-Anbieter begrenzt die Abrufe pro Tag. Prüft stündlich, wer fällig ist.
@@ -18,6 +19,7 @@ async function tick() {
   if (g.__havewaBankRunning) return;
   g.__havewaBankRunning = true;
   try {
+    if (!(await acquireLease())) return; // another instance runs the jobs (nexrees: job-lease.ts)
     const connectors = await prisma.bankConnector.findMany({ where: { autoSync: true }, select: { tenantId: true, lastAutoSyncAt: true } });
     for (const c of connectors) {
       if (!isBankSyncDue(c.lastAutoSyncAt)) continue;

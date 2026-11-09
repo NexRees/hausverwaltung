@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { BankConnectButton, SyncAllButton } from "@/components/bank-sync";
 import { Pager } from "@/components/pager";
+import { chargeLedgerPage } from "@/server/charge-ledger";
+import { SharedOptionsProvider } from "@/components/shared-options";
 import { cn } from "@/lib/utils";
 import { money, date } from "@/lib/format";
 import { getDateLocale } from "@/lib/date-locale";
@@ -51,10 +53,6 @@ export default async function FinancesPage({
   const txnFiltered = Object.values(txnFilter).some(Boolean);
   const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? "") ? (sp.tab as Tab) : "charges";
   const page = Math.max(1, Number(sp.page) || 1);
-  const statusFilter = sp.status ?? "";
-  const typeFilter = sp.type ?? "";
-  const leaseFilter = sp.lease ?? "";
-  const yearFilter = sp.year ?? "";
   const user = await requireUser();
   const t = await getTranslations();
   const locale = await getLocale();
@@ -63,20 +61,33 @@ export default async function FinancesPage({
   const payWhere = { tenantId, ...txnWhere(txnFilter) };
   const letterProviders = await configuredProviders(tenantId); // Mahnung per Brief (#78)
 
-  const [charges, accounts, mandates, leases, persons, bankConnector, bankLinks, payments, paymentCount, paymentSums, allDocuments] = await Promise.all([
+  const statusFilter = sp.status ?? "";
+  const typeFilter = sp.type ?? "";
+  const leaseFilter = sp.lease ?? "";
+  const yearFilter = sp.year ?? "";
+  const now = new Date();
+  // nexrees: status, open amount and paging are computed in Postgres (src/server/charge-ledger.ts).
+  const ledger = await chargeLedgerPage(
+    tenantId,
+    { status: statusFilter, type: typeFilter, leaseId: leaseFilter, year: Number(yearFilter) || undefined },
+    tab === "charges" ? (page - 1) * PAGE_SIZE : 0,
+    tab === "charges" ? PAGE_SIZE : 0,
+    now,
+  );
+  const [pageCharges, accounts, mandates, leases, persons, bankConnector, bankLinks, payments, paymentCount, paymentSums, allDocuments] = await Promise.all([
     prisma.charge.findMany({
-      where: { tenantId },
+      where: { tenantId, id: { in: ledger.rows.map((r) => r.id) } },
       include: {
-        payments: { select: { amount: true } },
-        dunnings: { select: { level: true } },
         lease: { include: { unit: { include: { building: { include: { property: true } } } }, renters: { include: { person: true } } } },
       },
-      orderBy: [{ dueDate: "desc" }],
     }),
     prisma.account.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" } }),
     prisma.sepaMandate.findMany({ where: { tenantId }, include: { person: true }, orderBy: { createdAt: "desc" } }),
-    prisma.lease.findMany({ where: { tenantId }, include: { unit: { include: { building: { include: { property: true } } } } } }),
-    prisma.person.findMany({ where: { tenantId }, orderBy: [{ lastName: "asc" }] }),
+    prisma.lease.findMany({
+      where: { tenantId },
+      select: { id: true, unit: { select: { label: true, building: { select: { property: { select: { name: true } } } } } } },
+    }),
+    prisma.person.findMany({ where: { tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: [{ lastName: "asc" }] }),
     prisma.bankConnector.findUnique({ where: { tenantId } }),
     prisma.bankLink.findMany({ where: { tenantId }, include: { account: { select: { name: true } } }, orderBy: { createdAt: "asc" } }),
     // Kontobewegungen (Zahlungen) inkl. Konto, zugeordneter Sollstellung und Belegen (#23).
@@ -103,31 +114,16 @@ export default async function FinancesPage({
   const isAdmin = user.role === "ADMIN";
   const linkByAccount = new Map(bankLinks.map((l) => [l.accountId, l]));
 
-  const now = new Date();
-  const rows = charges.map((c) => {
-    const paid = c.payments.reduce((a, p) => a + Number(p.amount), 0);
-    const open = Number(c.amount) - paid;
-    let status: "OPEN" | "PARTIAL" | "PAID" | "OVERDUE";
-    if (open <= 0.001) status = "PAID";
-    else if (c.dueDate < now) status = "OVERDUE";
-    else status = paid > 0 ? "PARTIAL" : "OPEN";
-    const dunLevel = c.dunnings.reduce((m, d) => Math.max(m, d.level), 0);
-    return { c, paid, open, status, dunLevel };
+  const chargeById = new Map(pageCharges.map((c) => [c.id, c]));
+  const pagedRows = ledger.rows.flatMap((r) => {
+    const c = chargeById.get(r.id);
+    return c ? [{ c, paid: r.paid, open: r.open, status: r.status, dunLevel: r.dunLevel }] : [];
   });
-  const totalOpen = rows.reduce((a, r) => a + Math.max(0, r.open), 0);
+  const totalOpen = ledger.totalOpen;
   const STATUSES = ["OPEN", "PARTIAL", "PAID", "OVERDUE"];
   const CHARGE_TYPES = ["MIETE", "NEBENKOSTEN", "HAUSGELD", "KAUTION", "SONSTIGES"];
-  const years = [...new Set(charges.map((c) => c.period.getUTCFullYear()))].sort((a, b) => b - a);
-  const visibleRows = rows.filter(
-    (r) =>
-      (!statusFilter || r.status === statusFilter) &&
-      (!typeFilter || r.c.type === typeFilter) &&
-      (!leaseFilter || r.c.leaseId === leaseFilter) &&
-      (!yearFilter || r.c.period.getUTCFullYear() === Number(yearFilter)),
-  );
-  // ponytail: Status wird je Sollstellung berechnet, daher Filter + Seiten im Speicher; Spalten in DB, wenn das zu groß wird.
-  const chargePages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
-  const pagedRows = visibleRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const years = ledger.years;
+  const chargePages = Math.max(1, Math.ceil(ledger.visible / PAGE_SIZE));
   const paymentPages = Math.max(1, Math.ceil(paymentCount / PAGE_SIZE));
   const filters = { status: statusFilter, type: typeFilter, lease: leaseFilter, year: yearFilter };
   const href = (to: Tab, p = 1, keepFilters = false) => {
@@ -151,6 +147,7 @@ export default async function FinancesPage({
     s === "PAID" ? "secondary" : s === "OVERDUE" ? "destructive" : "outline";
 
   return (
+    <SharedOptionsProvider lists={{ documents: allDocuments.map((d) => ({ value: d.id, label: d.name })) }}>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -234,7 +231,7 @@ export default async function FinancesPage({
           </form>
         </CardHeader>
         <CardContent className="p-0">
-          {visibleRows.length === 0 ? (
+          {ledger.visible === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">{t("finances.noOpenItems")}</p>
           ) : (
             <Table>
@@ -435,7 +432,7 @@ export default async function FinancesPage({
                       <div className="flex items-center justify-end gap-1">
                         <PaymentEditDialog
                           payment={{ id: p.id, note: p.note, documentIds: p.documents.map((d) => d.id) }}
-                          documents={allDocuments}
+                          documents="documents"
                         />
                         <DeleteButton action={deletePayment} id={p.id} />
                       </div>
@@ -577,5 +574,6 @@ export default async function FinancesPage({
         </>
       )}
     </div>
+    </SharedOptionsProvider>
   );
 }

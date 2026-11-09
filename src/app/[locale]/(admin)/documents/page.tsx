@@ -1,5 +1,8 @@
 import { Download, FileText } from "lucide-react";
 import { DOCUMENT_CATEGORIES } from "@/lib/schemas";
+import { Pager } from "@/components/pager";
+import { SharedOptionsProvider } from "@/components/shared-options";
+import { listParams, listHref, pageCount } from "@/lib/list-params";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser, roleAllows, WRITE_ROLES } from "@/lib/rbac";
 import { CostDialog } from "@/components/cost-dialog";
@@ -33,7 +36,7 @@ function fmtSize(bytes: number) {
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; cat?: string; prop?: string; unit?: string; person?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string; prop?: string; unit?: string; person?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const user = await requireUser();
@@ -48,27 +51,33 @@ export default async function DocumentsPage({
   const personId = (sp.person ?? "").trim();
   const cat = sp.cat && CATS.includes(sp.cat) ? sp.cat : "";
 
-  const [documents, properties, units, persons] = await Promise.all([
+  // nexrees: paged + searchable, option lists shared via SharedOptionsProvider (scale test)
+  const lp = listParams(sp);
+  const where = {
+    tenantId,
+    ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
+    ...(cat ? { category: cat as never } : {}),
+    ...(propId ? { propertyId: propId } : {}),
+    ...(unitId ? { unitId } : {}),
+    ...(personId ? { personId } : {}),
+  };
+  const [documents, total, properties, units, persons] = await Promise.all([
     prisma.document.findMany({
-      where: {
-        tenantId,
-        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-        ...(cat ? { category: cat as never } : {}),
-        ...(propId ? { propertyId: propId } : {}),
-        ...(unitId ? { unitId } : {}),
-        ...(personId ? { personId } : {}),
-      },
+      where,
+      skip: lp.skip,
+      take: lp.take,
       include: {
         property: { select: { name: true } },
         unit: { select: { label: true } },
         person: { select: { firstName: true, lastName: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     }),
+    prisma.document.count({ where }),
     prisma.property.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
     prisma.unit.findMany({
       where: { tenantId },
-      include: { building: { include: { property: { select: { name: true } } } } },
+      select: { id: true, label: true, building: { select: { property: { select: { name: true } } } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.person.findMany({ where: { tenantId }, orderBy: { lastName: "asc" }, select: { id: true, firstName: true, lastName: true } }),
@@ -78,13 +87,14 @@ export default async function DocumentsPage({
   const personOpts = persons.map((p) => ({ value: p.id, label: `${p.firstName} ${p.lastName}` }));
 
   return (
+    <SharedOptionsProvider lists={{ properties: propertyOpts, units: unitOpts, persons: personOpts }}>
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("documents.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("documents.subtitle")}</p>
         </div>
-        <DocumentDialog properties={propertyOpts} units={unitOpts} persons={personOpts} />
+        <DocumentDialog properties="properties" units="units" persons="persons" />
       </div>
 
       {/* Filter */}
@@ -135,6 +145,7 @@ export default async function DocumentsPage({
           </select>
         </div>
         <Button type="submit" size="sm" variant="outline">{t("common.search")}</Button>
+        <span className="pb-2 text-sm text-muted-foreground">{total}</span>
       </form>
 
       <Card>
@@ -195,9 +206,9 @@ export default async function DocumentsPage({
                             />
                           )}
                           <DocumentDialog
-                            properties={propertyOpts}
-                            units={unitOpts}
-                            persons={personOpts}
+                            properties="properties"
+                            units="units"
+                            persons="persons"
                             doc={{
                               id: d.id,
                               name: d.name,
@@ -221,6 +232,8 @@ export default async function DocumentsPage({
           )}
         </CardContent>
       </Card>
+      <Pager page={lp.page} pages={pageCount(total)} href={(p) => listHref("/documents", { q, cat, prop: propId, unit: unitId, person: personId }, p)} />
     </div>
+    </SharedOptionsProvider>
   );
 }

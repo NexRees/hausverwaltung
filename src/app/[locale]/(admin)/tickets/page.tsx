@@ -24,24 +24,46 @@ import {
   advanceMaintenance,
   addTicketTime,
 } from "@/server/actions/maintenance";
+import { Pager } from "@/components/pager";
+import { ListFilter } from "@/components/list-filter";
+import { SharedOptionsProvider } from "@/components/shared-options";
+import { listParams, listHref, pageCount, icontains } from "@/lib/list-params";
 
-export default async function TicketsPage() {
+export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const user = await requireUser();
+  // nexrees: paged + searchable, option lists shared via SharedOptionsProvider (scale test)
+  const lp = listParams(await searchParams);
   const t = await getTranslations();
   const locale = await getLocale();
   const df = await getDateLocale(locale);
   const tenantId = user.tenantId;
 
-  const [tickets, contractors, maintenance, properties, units, users] = await Promise.all([
+  const where = {
+    tenantId,
+    ...(lp.q
+      ? {
+          OR: [
+            { title: icontains(lp.q) },
+            { description: icontains(lp.q) },
+            { property: { name: icontains(lp.q) } },
+            { unit: { label: icontains(lp.q) } },
+          ],
+        }
+      : {}),
+  };
+  const [tickets, total, contractors, maintenance, properties, units, users] = await Promise.all([
     prisma.ticket.findMany({
-      where: { tenantId },
+      where,
+      skip: lp.skip,
+      take: lp.take,
       include: { property: true, unit: true, contractor: true, assignee: true },
-      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }, { id: "asc" }],
     }),
+    prisma.ticket.count({ where }),
     prisma.contractor.findMany({ where: { tenantId }, orderBy: { name: "asc" } }),
     prisma.maintenanceContract.findMany({ where: { tenantId }, include: { property: true, contractor: true }, orderBy: { nextDue: "asc" } }),
     prisma.property.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
-    prisma.unit.findMany({ where: { tenantId }, include: { building: { include: { property: true } } }, orderBy: { createdAt: "asc" } }),
+    prisma.unit.findMany({ where: { tenantId }, select: { id: true, label: true, building: { select: { property: { select: { name: true } } } } }, orderBy: { createdAt: "asc" } }),
     prisma.user.findMany({ where: { tenantId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
@@ -57,6 +79,7 @@ export default async function TicketsPage() {
   const fmtTime = (min: number) => `${Math.floor(min / 60)}h ${min % 60}m`;
 
   return (
+    <SharedOptionsProvider lists={{ properties: propertyOpts, units: unitOpts, contractors: contractorOpts, users: userOpts }}>
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -67,9 +90,11 @@ export default async function TicketsPage() {
           <Button variant="outline" size="sm" render={<a href="/api/export/tickets" />}>
             {t("common.exportCsv")}
           </Button>
-          <TicketDialog properties={propertyOpts} units={unitOpts} contractors={contractorOpts} users={userOpts} />
+          <TicketDialog properties="properties" units="units" contractors="contractors" users="users" />
         </div>
       </div>
+
+      <ListFilter q={lp.q} total={total} />
 
       <Card>
         <CardContent className="p-0">
@@ -120,10 +145,10 @@ export default async function TicketsPage() {
                             </Button>
                           </form>
                           <TicketDialog
-                            properties={propertyOpts}
-                            units={unitOpts}
-                            contractors={contractorOpts}
-                            users={userOpts}
+                            properties="properties"
+                            units="units"
+                            contractors="contractors"
+                            users="users"
                             ticket={{
                               id: tk.id,
                               title: tk.title,
@@ -150,6 +175,7 @@ export default async function TicketsPage() {
           )}
         </CardContent>
       </Card>
+      <Pager page={lp.page} pages={pageCount(total)} href={(p) => listHref("/tickets", { q: lp.q }, p)} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Handwerker */}
@@ -217,5 +243,6 @@ export default async function TicketsPage() {
         </Card>
       </div>
     </div>
+    </SharedOptionsProvider>
   );
 }

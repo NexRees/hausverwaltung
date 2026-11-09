@@ -6,18 +6,22 @@ import { updatePaymentDetails } from "@/server/actions/finances";
 import { Button } from "@/components/ui/button";
 import { CrudDialog } from "@/components/crud-dialog";
 import { TextAreaField } from "@/components/form-fields";
+import { useSharedOptions } from "@/components/shared-options";
 
 type Doc = { id: string; name: string };
 
 // Notiz + Belege einer Kontobewegung bearbeiten (#23).
 export function PaymentEditDialog({
   payment,
-  documents,
+  documents: documentsProp,
 }: {
   payment: { id: string; note: string | null; documentIds: string[] };
-  documents: Doc[];
+  /** nexrees: the documents, or the name of a shared list ({value: id, label: name}). */
+  documents: Doc[] | string;
 }) {
   const t = useTranslations();
+  const shared = useSharedOptions(typeof documentsProp === "string" ? documentsProp : "");
+  const documents: Doc[] = typeof documentsProp === "string" ? shared.map((o) => ({ id: o.value, name: o.label })) : documentsProp;
   return (
     <CrudDialog
       trigger={
