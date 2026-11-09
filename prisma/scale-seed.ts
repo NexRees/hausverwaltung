@@ -2,7 +2,7 @@
 //
 //   SCALE_UNITS=2000 SCALE_YEARS=3 npx tsx prisma/scale-seed.ts
 //
-// Creates ONE new tenant ("Scale Test Hausverwaltung", isDemo=false) with roughly SCALE_UNITS units
+// By default creates ONE new tenant ("Scale Test Hausverwaltung", isDemo=false) with roughly SCALE_UNITS units
 // and SCALE_YEARS years of history across every area of the app: properties (rental + WEG),
 // buildings, units, owners, renters, leases with components/deposits/adjustments, monthly charges,
 // bank payments (on time, late, missing), dunning, meters + readings, cost entries, tickets,
@@ -10,14 +10,19 @@
 // resolutions, economic plans, reserves, appointments, tasks, emails, letters, audit log,
 // notifications, insurances and property tax.
 //
-// Deterministic (fixed PRNG seed), so runs are comparable. Refuses to run when NODE_ENV=production
-// or APP_ENV=production. Never touches existing tenants. Remove with SCALE_RESET=1 (deletes only
-// the tenant created by this script, identified by its name).
+// SCALE_TENANT="NexRees" loads the data into that existing tenant instead (e.g. staging, so every
+// staff login sees it). Its users then act as assignees; no extra logins are created.
+//
+// Deterministic (fixed PRNG seed), so runs are comparable. Refuses to run in production (see
+// seed-guard.ts). Every row it creates has an id starting with "sc" (cuids start with "c"), so
+// SCALE_RESET=1 (with the same SCALE_TENANT, if used) removes exactly the generated rows and
+// nothing else; in the default mode it also removes the test tenant.
 import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedAllowed } from "./seed-guard";
 
 const TENANT_NAME = "Scale Test Hausverwaltung";
+const INTO = process.env.SCALE_TENANT?.trim() || ""; // load into this existing tenant instead
 export const SCALE_ADMIN_EMAIL = "scale-admin@nexrees.test";
 
 if (!seedAllowed(process.env)) {
@@ -68,28 +73,43 @@ async function flush(model: string) {
   buf[model] = [];
 }
 
+// Children before parents; every generated id starts with ID_PREFIX.
+const ID_PREFIX = "sc";
+const RESET_ORDER = [
+  "dunningNotice", "payment", "charge", "renter", "owner", "rentComponent", "rentAdjustment", "deposit", "lease",
+  "meterReading", "meter", "ticket", "document", "appointment", "agendaItem", "resolution", "meeting",
+  "reserveTransaction", "reserve", "economicPlan", "costEntry", "maintenanceContract", "insurance", "propertyTax",
+  "unit", "building", "property", "sepaMandate", "person", "account", "contractor", "task", "emailMessage",
+  "letter", "auditLog", "notification", "user",
+];
+
 async function reset() {
-  const tenants = await prisma.tenant.findMany({ where: { name: TENANT_NAME }, select: { id: true } });
+  const tenants = INTO
+    ? await prisma.tenant.findMany({ where: { name: INTO }, select: { id: true } })
+    : await prisma.tenant.findMany({ where: { name: TENANT_NAME }, select: { id: true } });
+  if (INTO && tenants.length !== 1) throw new Error(`SCALE_TENANT "${INTO}": expected exactly one tenant, found ${tenants.length}`);
   for (const t of tenants) {
-    // Tenant cascade covers users/properties/persons; the rest only carry tenantId.
-    const where = { tenantId: t.id };
-    await prisma.payment.deleteMany({ where });
-    await prisma.charge.deleteMany({ where });
-    await prisma.auditLog.deleteMany({ where });
-    await prisma.notification.deleteMany({ where });
-    await prisma.emailMessage.deleteMany({ where });
-    await prisma.letter.deleteMany({ where });
-    await prisma.task.deleteMany({ where });
-    await prisma.account.deleteMany({ where });
-    await prisma.contractor.deleteMany({ where });
-    await prisma.tenant.delete({ where: { id: t.id } });
+    for (const model of RESET_ORDER) {
+      const delegate = (prisma as unknown as Record<string, { deleteMany(a: unknown): Promise<{ count: number }> }>)[model];
+      const r = await delegate.deleteMany({ where: { tenantId: t.id, id: { startsWith: ID_PREFIX } } });
+      if (r.count) console.log(`  removed ${model.padEnd(20)} ${r.count}`);
+    }
+    if (!INTO) await prisma.tenant.delete({ where: { id: t.id } });
   }
-  console.log(`removed ${tenants.length} scale tenant(s)`);
+  console.log(INTO ? `removed the generated data from "${INTO}"` : `removed ${tenants.length} scale tenant(s)`);
 }
 
 async function main() {
   if (process.env.SCALE_RESET === "1") return reset();
-  if (await prisma.tenant.findFirst({ where: { name: TENANT_NAME } })) {
+  let existing: { id: string } | null = null;
+  if (INTO) {
+    const found = await prisma.tenant.findMany({ where: { name: INTO }, select: { id: true } });
+    if (found.length !== 1) throw new Error(`SCALE_TENANT "${INTO}": expected exactly one tenant, found ${found.length}`);
+    existing = found[0];
+    if (await prisma.property.findFirst({ where: { tenantId: existing.id, id: { startsWith: ID_PREFIX } } })) {
+      throw new Error(`"${INTO}" already has generated data. Run with SCALE_RESET=1 first.`);
+    }
+  } else if (await prisma.tenant.findFirst({ where: { name: TENANT_NAME } })) {
     throw new Error(`"${TENANT_NAME}" exists already. Run with SCALE_RESET=1 first.`);
   }
   const t0 = Date.now();
@@ -98,23 +118,30 @@ async function main() {
   const startMonth = addMonths(endMonth, -12 * YEARS + 1);
   console.log(`scale-seed: ~${UNITS} units, ${YEARS} year(s) from ${startMonth.toISOString().slice(0, 7)}`);
 
-  const tenantId = id();
-  await prisma.tenant.create({ data: { id: tenantId, name: TENANT_NAME, address: "Mainzer Landstraße 1\n60329 Frankfurt am Main" } });
+  const tenantId = existing?.id ?? id();
+  if (!existing) {
+    await prisma.tenant.create({ data: { id: tenantId, name: TENANT_NAME, address: "Mainzer Landstraße 1\n60329 Frankfurt am Main" } });
+  }
 
-  // --- users ---
+  // --- users: in an existing tenant its own users act as assignees, no extra logins ---
+  const userIds: string[] = [];
+  if (existing) {
+    userIds.push(...(await prisma.user.findMany({ where: { tenantId }, select: { id: true } })).map((u) => u.id));
+    if (userIds.length === 0) throw new Error(`"${INTO}" has no users`);
+  } else {
   const pw = await bcrypt.hash(process.env.SCALE_ADMIN_PASSWORD ?? "scale-test", 10);
   const staff = [
     { email: SCALE_ADMIN_EMAIL, name: "Scale Admin", role: "ADMIN" },
     ...Array.from({ length: 12 }, (_, i) => ({ email: `verwalter${i + 1}@nexrees.test`, name: `Verwalter ${i + 1}`, role: "VERWALTER" })),
     ...Array.from({ length: 4 }, (_, i) => ({ email: `buchhaltung${i + 1}@nexrees.test`, name: `Buchhaltung ${i + 1}`, role: "BUCHHALTUNG" })),
   ];
-  const userIds: string[] = [];
   for (const s of staff) {
     const uid = id();
     userIds.push(uid);
     push("user", { id: uid, tenantId, email: s.email, name: s.name, role: s.role, passwordHash: pw });
   }
   await flush("user");
+  }
 
   // --- contractors ---
   const contractorIds: string[] = [];
@@ -309,11 +336,11 @@ async function main() {
     push("letter", { id: id(), tenantId, personId: p.id, recipient: `${p.name}\nMusterstraße 1\n60311 Frankfurt`, subject: "Schreiben", body: "Synthetischer Brief.", status: pick(["VERSENDET", "ZUGESTELLT", "ENTWURF"]), sentAt: addMonths(startMonth, int(0, months - 1)) });
   }
   for (let k = 0; k < months * 4000; k++) push("auditLog", { id: id(), tenantId, userId: pick(userIds), userName: "Verwalter", action: pick(["CREATE", "UPDATE", "UPDATE", "DELETE"]), entity: pick(["Lease", "Payment", "Charge", "Ticket", "Person"]), entityId: id(), summary: "synthetisch", createdAt: new Date(startMonth.getTime() + rnd() * (now.getTime() - startMonth.getTime())) });
-  for (const uid of userIds) for (let k = 0; k < 200; k++) push("notification", { id: id(), tenantId, userId: uid, title: "Schadensmeldung eingegangen", link: "/tickets", read: chance(0.9) });
+  if (!existing) for (const uid of userIds) for (let k = 0; k < 200; k++) push("notification", { id: id(), tenantId, userId: uid, title: "Schadensmeldung eingegangen", link: "/tickets", read: chance(0.9) });
   for (const m of ["task", "emailMessage", "letter", "auditLog", "notification"]) await flush(m);
 
   const s = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log(`done in ${s}s: ${units.length} units, ${properties.length} properties, ${persons.length} persons, ${charges} charges. Login: ${SCALE_ADMIN_EMAIL}`);
+  console.log(`done in ${s}s: ${units.length} units, ${properties.length} properties, ${persons.length} persons, ${charges} charges. ${existing ? `Tenant: ${INTO}` : `Login: ${SCALE_ADMIN_EMAIL}`}`);
 }
 
 main()

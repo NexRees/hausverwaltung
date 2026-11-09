@@ -52,6 +52,7 @@ what we changed, so every upstream merge stays quick.
 | Scale: open amounts | `src/server/charge-ledger.ts` (new, + test); finances, dunning, dashboard, reports pages; `bank-sync.ts`, `api-ops.ts`, `api-data.ts`, `export/openitems`, `actions/ai.ts`, `actions/finances.ts` | Paid/open/overdue per charge computed in Postgres instead of loading every charge with its payments (finances 11 s → 0.4 s). Bank/CAMT auto-matching now takes the oldest open charge first. Rent run inserts in one batch |
 | Scale: background jobs | `prisma/schema.prisma` (`JobLease`), migration `20261109120000_nexrees_job_lease`, `src/lib/job-lease.ts` (new), the five `src/lib/*-scheduler.ts` | Only the instance holding the lease runs IMAP, bank, letter, outbox and notification jobs, so production can run 2+ app tasks. Candidate to offer upstream |
 | Scale test data | `prisma/scale-seed.ts` (new) | Synthetic 2,000-unit tenant with 3 years of history for load tests; refuses production |
+| Staging data pipeline | `.github/workflows/nexrees-staging-data.yml` (new), `prisma/seed-guard.ts` (new, + test), `deploy/aws/modules/stack/ci.tf` (`ci_can_run_tasks`) | One click loads (or removes) the test data into an existing staging company (`SCALE_TENANT`), as a one-off ECS task. Generated ids start with `sc`, so reset removes only them. Staging only. `nexrees-seed-check.yml` (new) runs seed/reset on every PR that touches `prisma/`, so the test data keeps up with schema changes |
 
 ## Merging upstream
 

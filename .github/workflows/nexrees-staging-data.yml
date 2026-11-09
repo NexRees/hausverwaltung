@@ -1,0 +1,121 @@
+# nexrees: load or remove the scale-test dataset on STAGING with one click
+# (Actions -> "Staging data" -> Run workflow). Runs prisma/scale-seed.ts as a one-off ECS task
+# with the image and network of the running staging service, waits for it and prints its log.
+# The data goes into an existing company (default "NexRees"); "reset" removes exactly the
+# generated rows (ids starting with "sc") and nothing else.
+# Needs: repository variable AWS_STAGING_DEPLOY_ROLE and ci_can_run_tasks = true in
+# deploy/aws/envs/staging (terraform apply once). Production has no such permission.
+name: Staging data
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "seed = load test data, reset = remove it, reseed = remove then load"
+        type: choice
+        options: [seed, reset, reseed]
+        default: seed
+      tenant:
+        description: "Company (Mandant) name on staging, must match exactly"
+        type: string
+        default: NexRees
+      units:
+        description: "Number of units"
+        type: string
+        default: "2000"
+      years:
+        description: "Years of history"
+        type: string
+        default: "3"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: staging-data
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: vars.AWS_STAGING_DEPLOY_ROLE != ''
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 45
+    env:
+      CLUSTER: nexrees-staging
+      SERVICE: app
+      LOG_GROUP: /ecs/nexrees-staging
+      TENANT: ${{ inputs.tenant }}
+      UNITS: ${{ inputs.units }}
+      YEARS: ${{ inputs.years }}
+    steps:
+      - name: Check inputs
+        run: |
+          [[ "$UNITS" =~ ^[0-9]+$ && "$UNITS" -ge 1 && "$UNITS" -le 20000 ]] || { echo "units must be 1..20000"; exit 1; }
+          [[ "$YEARS" =~ ^[0-9]+$ && "$YEARS" -ge 1 && "$YEARS" -le 10 ]] || { echo "years must be 1..10"; exit 1; }
+          [[ -n "${TENANT// }" ]] || { echo "tenant must not be empty"; exit 1; }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_STAGING_DEPLOY_ROLE }}
+          aws-region: eu-central-1
+
+      - name: Run the seed task(s)
+        env:
+          ACTION: ${{ inputs.action }}
+        run: |
+          set -euo pipefail
+          svc=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query 'services[0]')
+          taskdef=$(jq -r .taskDefinition <<<"$svc")
+          netcfg=$(jq -c .networkConfiguration <<<"$svc")
+          echo "task definition: $taskdef"
+
+          run_one() { # $1 = SCALE_RESET value
+            local overrides
+            # 1 vCPU / 2 GB for the one-off task only (cents per run); the service keeps its size.
+            overrides=$(jq -nc --arg t "$TENANT" --arg u "$UNITS" --arg y "$YEARS" --arg r "$1" '{
+              cpu: "1024", memory: "2048",
+              containerOverrides: [{
+                name: "app",
+                command: ["npx", "tsx", "prisma/scale-seed.ts"],
+                environment: [
+                  {name: "SCALE_TENANT", value: $t}, {name: "SCALE_UNITS", value: $u},
+                  {name: "SCALE_YEARS", value: $y}, {name: "SCALE_RESET", value: $r},
+                  {name: "NODE_OPTIONS", value: "--max-old-space-size=1536"}
+                ]
+              }]
+            }')
+            local arn id code
+            arn=$(aws ecs run-task --cluster "$CLUSTER" --launch-type FARGATE --task-definition "$taskdef" \
+              --network-configuration "$netcfg" --overrides "$overrides" --started-by staging-data \
+              --query 'tasks[0].taskArn' --output text)
+            id=${arn##*/}
+            echo "started task $id (SCALE_RESET=$1), waiting ..."
+            for i in 1 2 3 4; do # each wait gives up after 10 minutes
+              aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$arn" && break
+              [ "$i" = 4 ] && { echo "::error::task still running after 40 minutes"; exit 1; }
+              echo "  still running"
+            done
+            echo "----- task log -----"
+            aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "app/app/$id" \
+              --start-from-head --query 'events[].message' --output text | tr '\t' '\n' || echo "(no log found)"
+            echo "--------------------"
+            code=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$arn" \
+              --query 'tasks[0].containers[0].exitCode' --output text)
+            if [ "$code" != "0" ]; then
+              aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$arn" --query 'tasks[0].stoppedReason' --output text
+              echo "::error::seed task exited with code $code"
+              exit 1
+            fi
+          }
+
+          case "$ACTION" in
+            seed)   run_one 0 ;;
+            reset)  run_one 1 ;;
+            reseed) run_one 1; run_one 0 ;;
+          esac
+          {
+            echo "### Staging data: $ACTION done"
+            echo "Company **$TENANT**, $UNITS units, $YEARS year(s). Open https://staging.nexrees.de and pick the company."
+          } >> "$GITHUB_STEP_SUMMARY"

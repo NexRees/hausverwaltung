@@ -179,3 +179,9 @@ variable "budget_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "ci_can_run_tasks" {
+  description = "Let the CI role start one-off tasks (test data load/removal) and read their logs. Staging only."
+  type        = bool
+  default     = false
+}

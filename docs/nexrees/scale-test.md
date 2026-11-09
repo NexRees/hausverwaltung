@@ -4,6 +4,11 @@
 
 ## Dataset
 
+**On staging:** Actions → "Staging data" → Run workflow (action `seed`, company `NexRees`). It loads
+the data into that existing company in about 5 to 10 minutes; `reset` removes only the generated
+rows (ids starting with `sc`), `reseed` does both. Locally: `SCALE_TENANT="NexRees"` with the
+command below.
+
 `SCALE_UNITS=2000 SCALE_YEARS=3 npx tsx prisma/scale-seed.ts` creates one tenant
 ("Scale Test Hausverwaltung", login `scale-admin@nexrees.test` / `SCALE_ADMIN_PASSWORD`, default
 `scale-test`) in about 25 s. It refuses `APP_ENV=production` (and a production build without `APP_ENV`); `SCALE_RESET=1` removes it.
