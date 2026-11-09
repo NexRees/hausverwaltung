@@ -6,7 +6,7 @@
 
 `SCALE_UNITS=2000 SCALE_YEARS=3 npx tsx prisma/scale-seed.ts` creates one tenant
 ("Scale Test Hausverwaltung", login `scale-admin@nexrees.test` / `SCALE_ADMIN_PASSWORD`, default
-`scale-test`) in about 25 s. It refuses `NODE_ENV`/`APP_ENV=production`; `SCALE_RESET=1` removes it.
+`scale-test`) in about 25 s. It refuses `APP_ENV=production` (and a production build without `APP_ENV`); `SCALE_RESET=1` removes it.
 
 | What | Rows |
 |---|---|

@@ -15,12 +15,13 @@
 // the tenant created by this script, identified by its name).
 import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedAllowed } from "./seed-guard";
 
 const TENANT_NAME = "Scale Test Hausverwaltung";
 export const SCALE_ADMIN_EMAIL = "scale-admin@nexrees.test";
 
-if (process.env.NODE_ENV === "production" || process.env.APP_ENV === "production") {
-  throw new Error("scale-seed: refuses to run against production");
+if (!seedAllowed(process.env)) {
+  throw new Error("scale-seed: refuses to run against production (APP_ENV=production, or NODE_ENV=production without APP_ENV)");
 }
 
 const prisma = new PrismaClient();
