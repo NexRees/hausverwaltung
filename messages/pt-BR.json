@@ -855,7 +855,8 @@
     "mailed": "Rascunhos do demonstrativo criados na caixa de saída.",
     "explain": "IA: explicar demonstrativo",
     "explaining": "Explicando…",
-    "explainHint": "Sem ANTHROPIC_API_KEY, apenas um resumo curto é exibido."
+    "explainHint": "Sem ANTHROPIC_API_KEY, apenas um resumo curto é exibido.",
+    "pdf": "Prestação de contas em PDF"
   },
   "costType": {
     "GRUNDSTEUER": "Imposto predial",
@@ -975,7 +976,13 @@
     "preview": "Visualizar",
     "edit": "Editar documento",
     "linkedTo": "Vinculado a",
-    "searchPlaceholder": "Pesquisar por nome…"
+    "searchPlaceholder": "Pesquisar por nome…",
+    "previewLoading": "Carregando pré-visualização…",
+    "previewFailed": "Pré-visualização indisponível. Faça o download.",
+    "previewUnsupported": "Sem pré-visualização para este tipo de arquivo.",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir",
+    "pageCount": "{count, plural, one {# página} other {# páginas}}"
   },
   "documentCategory": {
     "VERTRAG": "Contrato",

@@ -45,6 +45,8 @@ what we changed, so every upstream merge stays quick.
 | CI | `.github/workflows/casaos-store.yml`, `pages.yml` | Run only in the upstream repo (they publish HaVeWa's store and site) |
 | CI | `.github/workflows/docker-publish.yml` | Image name lowercased (`NexRees` owner; registry names must be lowercase) |
 | CI (new) | `.github/workflows/nexrees-*.yml` | Daily upstream sync, staging deploy, promotion to production (same digest, approval) |
+| Document preview | `src/components/document-preview.tsx`, `src/components/pdf-viewer.tsx` (new), `src/lib/preview-kind.ts` (new, + test), removed `src/app/api/documents/[id]/viewer/route.ts`, `pdfjs-dist` | Upstream loaded the Mudex viewer script from `mudex.org` at runtime, on our origin. Now pdf.js is bundled with the app (Apache-2.0): PDFs render in the browser, images/audio/video/text natively, Office files offer a download. No external requests. Candidate to offer upstream. |
+| Betriebskostenabrechnung PDF | `src/lib/allocation/statement.ts` (`items` per cost, + test), `src/server/statements.ts`, `src/lib/statement-doc.ts` (new, + test), `src/server/statement-pdf.ts` (new, + test), `src/server/statement-letter.ts` (new), `src/app/api/statements/pdf` (new), `statement-actions.ts`, `(admin)/statements/page.tsx` | Upstream PDF was a one-page summary. Now a DIN 5008 letter (PDF/A-1b, multi-page) listing per cost type: total cost, allocation key, the tenant's share and amount, minus prepayments. Used by "An Mieter mailen" and a PDF link per row. Candidate to offer upstream. |
 | AWS | `deploy/aws/` (new) | Terraform for staging and production in AWS Frankfurt; safe deployment profile in its README |
 
 ## Merging upstream
