@@ -2,6 +2,7 @@ import { ArrowLeft, X, Check } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/rbac";
+import { RecordTimeline } from "@/components/record-timeline"; // nexrees
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { money, date } from "@/lib/format";
@@ -310,6 +311,8 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
           )}
         </CardContent>
       </Card>
+      {/* nexrees: tasks, comments and history of this record */}
+      <RecordTimeline user={user} entity="Lease" entityId={lease.id} />
     </div>
   );
 }

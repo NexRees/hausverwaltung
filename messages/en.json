@@ -51,6 +51,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "myWork": "My work",
     "properties": "Properties",
     "units": "Units",
     "persons": "People",
@@ -1338,6 +1339,42 @@
     "kindHint_ISSUE_REPORTED": "A tenant reports damage through the portal",
     "kind_INBOUND_EMAIL": "Incoming emails",
     "kindHint_INBOUND_EMAIL": "New mails in the inbox (IMAP fetch)"
+  },
+  "myWork": {
+    "title": "My work",
+    "subtitle": "What is on your desk: tasks, tickets, mentions and what you handed to others.",
+    "myTasks": "My tasks",
+    "noTasks": "No open tasks for you.",
+    "myTickets": "My tickets",
+    "noTickets": "No open tickets for you.",
+    "mentions": "Mentions (30 days)",
+    "noMentions": "Nobody mentioned you.",
+    "delegated": "Handed to others",
+    "noDelegated": "You are not waiting on anyone.",
+    "unassigned": "Open, nobody assigned",
+    "noUnassigned": "Every open task has someone."
+  },
+  "collab": {
+    "title": "Tasks & comments",
+    "newTask": "Task",
+    "editTask": "Edit task",
+    "taskTitle": "Task",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "dueDate": "Due",
+    "description": "Description",
+    "markDone": "Done",
+    "reopen": "Reopen",
+    "take": "Take",
+    "assignedTo": "with {name}",
+    "from": "from {name}",
+    "comment": "Comment",
+    "commentPlaceholder": "Write a comment … use @ to mention a colleague",
+    "mentionHint": "@Name notifies the person. Ctrl+Enter sends.",
+    "send": "Send",
+    "empty": "No tasks, comments or changes yet.",
+    "taskCreated": "Task “{title}” from {by} to {to}",
+    "taskDone": "Task “{title}” done ({name})"
   },
   "nexrees": {
     "bookkeeping": {

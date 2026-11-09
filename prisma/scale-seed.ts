@@ -90,7 +90,7 @@ async function reset() {
   if (INTO && tenants.length !== 1) throw new Error(`SCALE_TENANT "${INTO}": expected exactly one tenant, found ${tenants.length}`);
   for (const t of tenants) {
     // nexrees: generated test data is purged, not journaled, and ignores the period lock
-    // (DB triggers of migration 20261109200000_nexrees_bookkeeping_integrity).
+    // (DB triggers of migration 20261109210000_nexrees_bookkeeping_integrity).
     await prisma.$transaction(
       async (tx) => {
         await tx.$executeRaw`SELECT set_config('nexrees.purge', 'on', true)`;

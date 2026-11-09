@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // nexrees: app side of the bookkeeping guards in migration
-// 20261109200000_nexrees_bookkeeping_integrity. The database refuses writes into a closed period
+// 20261109210000_nexrees_bookkeeping_integrity. The database refuses writes into a closed period
 // and journals every change of financial rows; this module tells it who is acting and turns its
 // refusals into readable German messages.
 

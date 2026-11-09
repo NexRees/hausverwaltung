@@ -51,6 +51,7 @@
   },
   "nav": {
     "dashboard": "Painel",
+    "myWork": "Meu trabalho",
     "properties": "Imóveis",
     "units": "Unidades",
     "persons": "Pessoas",
@@ -1338,6 +1339,42 @@
     "kindHint_ISSUE_REPORTED": "Inquilino relata um dano pelo portal",
     "kind_INBOUND_EMAIL": "E-mails recebidos",
     "kindHint_INBOUND_EMAIL": "Novos e-mails na caixa de entrada (IMAP)"
+  },
+  "myWork": {
+    "title": "Meu trabalho",
+    "subtitle": "O que está com você: tarefas, chamados, menções e o que você passou para outros.",
+    "myTasks": "Minhas tarefas",
+    "noTasks": "Nenhuma tarefa aberta para você.",
+    "myTickets": "Meus chamados",
+    "noTickets": "Nenhum chamado aberto para você.",
+    "mentions": "Menções (30 dias)",
+    "noMentions": "Ninguém mencionou você.",
+    "delegated": "Passado para outros",
+    "noDelegated": "Você não está esperando ninguém.",
+    "unassigned": "Abertas, sem responsável",
+    "noUnassigned": "Toda tarefa aberta tem alguém."
+  },
+  "collab": {
+    "title": "Tarefas e comentários",
+    "newTask": "Tarefa",
+    "editTask": "Editar tarefa",
+    "taskTitle": "Tarefa",
+    "assignee": "Responsável",
+    "unassigned": "Sem responsável",
+    "dueDate": "Vencimento",
+    "description": "Descrição",
+    "markDone": "Concluída",
+    "reopen": "Reabrir",
+    "take": "Assumir",
+    "assignedTo": "com {name}",
+    "from": "de {name}",
+    "comment": "Comentário",
+    "commentPlaceholder": "Escreva um comentário … use @ para mencionar um colega",
+    "mentionHint": "@Nome notifica a pessoa. Ctrl+Enter envia.",
+    "send": "Enviar",
+    "empty": "Ainda sem tarefas, comentários ou alterações.",
+    "taskCreated": "Tarefa “{title}” de {by} para {to}",
+    "taskDone": "Tarefa “{title}” concluída ({name})"
   },
   "nexrees": {
     "bookkeeping": {

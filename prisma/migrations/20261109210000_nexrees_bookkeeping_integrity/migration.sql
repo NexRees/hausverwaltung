@@ -4,6 +4,7 @@
 --    Payment (date), CostEntry (31 Dec of year) and ReserveTransaction (date) on or before that
 --    day can no longer be inserted, changed or deleted, whatever writes them (UI, /api/v1, MCP,
 --    bank sync, imports). Payment notes stay editable.
+-- (The AuditLog (tenantId, entity, entityId) index comes from 20261109200000_nexrees_collaboration.)
 -- 2. Change journal: every UPDATE and DELETE of those tables plus Deposit and SepaMandate writes
 --    an AuditLog row with the full before/after image. The acting user comes from the
 --    transaction settings nexrees.user_id / nexrees.user_name / nexrees.source when the app
@@ -20,7 +21,6 @@ ALTER TABLE "SepaMandate" ADD COLUMN "lastCollectedAt" TIMESTAMP(3);
 ALTER TABLE "AuditLog" ADD COLUMN "before" JSONB;
 ALTER TABLE "AuditLog" ADD COLUMN "after" JSONB;
 ALTER TABLE "AuditLog" ADD COLUMN "source" TEXT;
-CREATE INDEX "AuditLog_tenantId_entity_entityId_idx" ON "AuditLog"("tenantId", "entity", "entityId");
 
 CREATE OR REPLACE FUNCTION nexrees_purging() RETURNS boolean LANGUAGE sql STABLE AS $$
   SELECT coalesce(current_setting('nexrees.purge', true), '') = 'on'

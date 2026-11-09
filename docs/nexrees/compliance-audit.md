@@ -61,7 +61,7 @@ does not repeat those. **This is an engineering review, not legal advice.** Item
 
 ## Rollout notes
 
-- Migration `20261109200000_nexrees_bookkeeping_integrity` adds columns and triggers only; no data
+- Migration `20261109210000_nexrees_bookkeeping_integrity` adds columns and triggers only; no data
   is changed. Rollback: drop the triggers (`DROP TRIGGER nexrees_… ON "…"`), columns can stay.
 - Staging: after deploy the AI assistant answers with a residency error until a Bedrock model with
   in-region availability is enabled in the account and set as `AI_MODEL` or in Settings → KI.
