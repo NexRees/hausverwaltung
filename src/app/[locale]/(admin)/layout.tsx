@@ -13,8 +13,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { UserMenu } from "@/components/user-menu";
 import { SearchBox } from "@/components/search-box";
 import { BRAND } from "@/lib/brand";
 import { EnvBadge } from "@/components/env-badge";
@@ -53,7 +51,11 @@ export default async function AdminLayout({
       {tenant?.brandColor && (
         <style>{`:root{--primary:${tenant.brandColor};--sidebar-primary:${tenant.brandColor};--ring:${tenant.brandColor};--primary-foreground:${readableForeground(tenant.brandColor)};--sidebar-primary-foreground:${readableForeground(tenant.brandColor)};}`}</style>
       )}
-      <AppSidebar logoUrl={logoUrl} superAdmin={user.superAdmin} />
+      <AppSidebar
+        logoUrl={logoUrl}
+        superAdmin={user.superAdmin}
+        user={{ name: user.name, email: user.email, role: user.role }}
+      />
       <SidebarInset>
         {/* nexrees: the top bar stays in place while the page scrolls */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -74,8 +76,7 @@ export default async function AdminLayout({
             <InfoDrawer tenantName={tenant?.name ?? BRAND.name} />
             <NotificationBell items={notifItems} unread={unread} />
             <LanguageSwitcher />
-            <ThemeToggle />
-            <UserMenu name={user.name} email={user.email} role={user.role} />
+            {/* nexrees: theme, settings and the account menu moved to the sidebar footer */}
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>

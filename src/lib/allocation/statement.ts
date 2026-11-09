@@ -57,6 +57,23 @@ export interface CostInput {
   unitIds?: string[];
 }
 
+/** nexrees: Umlagebasis einer Position für die Einheit, z. B. 75 m² von 600 m². */
+export interface StatementBasis {
+  method: AllocationMethod; // tatsächlich angewandt (nach Rückfall auf Fläche)
+  /** Anteil der Position, der nach dieser Basis verteilt wird (0..1; Heizung z. B. 0,3/0,7). */
+  portion: number;
+  unitValue: number;
+  totalValue: number;
+}
+
+/** nexrees: Anteil einer Kostenposition an einer Abrechnungszeile (für die Einzelaufstellung). */
+export interface StatementItem {
+  costId: string;
+  basis: StatementBasis[];
+  /** Kostenanteil dieser Zeile in Euro. Summe der items == allocated (cent-genau). */
+  amount: number;
+}
+
 export interface StatementLine {
   unitId: string;
   leaseId: string | null; // null = Einheit ohne Mietverhältnis (Leerstand)
@@ -64,6 +81,38 @@ export interface StatementLine {
   allocated: number; // umgelegte Kosten
   prepayment: number;
   balance: number; // >0 Guthaben, <0 Nachzahlung
+  /** nexrees: Aufschlüsselung je Kostenposition (Betriebskostenabrechnung nach § 556 BGB). */
+  items: StatementItem[];
+}
+
+function weightOf(u: UnitInput, method: AllocationMethod): number {
+  switch (method) {
+    case "AREA":
+      return u.area;
+    case "UNITS":
+      return 1;
+    case "MEA":
+      return u.mea ?? 0;
+    case "PERSONS":
+      return u.persons;
+    case "CONSUMPTION":
+      return u.consumption ?? 0;
+    case "CUSTOM":
+      return 0;
+  }
+}
+
+/** Beträge auf Cent runden, sodass ihre Summe genau `target` ergibt (größter Rest). */
+function roundToTarget(raw: number[], target: number): number[] {
+  const cents = raw.map((r) => Math.floor(r * 100 + 1e-6));
+  let rest = Math.round(target * 100) - cents.reduce((a, b) => a + b, 0);
+  const order = raw.map((r, i) => [r * 100 - cents[i], i] as const).sort((a, b) => b[0] - a[0]);
+  for (let k = 0; rest !== 0 && order.length > 0; k = (k + 1) % order.length) {
+    const i = order[k][1];
+    cents[i] += rest > 0 ? 1 : -1;
+    rest += rest > 0 ? -1 : 1;
+  }
+  return cents.map((c) => c / 100);
 }
 
 function participants(units: UnitInput[]): AllocationParticipant[] {
@@ -94,10 +143,28 @@ export function buildStatement(units: UnitInput[], costs: CostInput[]) {
   // Mietverhältnis gekürzt; der Verbrauch deckt bereits nur die Nutzungszeit ab.
   const perUnitTime: Record<string, number> = {};
   const perUnitCons: Record<string, number> = {};
+  // nexrees: dieselben Töpfe je Kostenposition, plus Umlagebasis je Einheit.
+  const itemTime: Record<string, Record<string, number>> = {};
+  const itemCons: Record<string, Record<string, number>> = {};
+  const itemBasis: Record<string, Record<string, StatementBasis[]>> = {};
   units.forEach((u) => {
     perUnitTime[u.id] = 0;
     perUnitCons[u.id] = 0;
+    itemTime[u.id] = {};
+    itemCons[u.id] = {};
+    itemBasis[u.id] = {};
   });
+  const add = (bucket: "time" | "cons", costId: string, unitId: string, amount: number) => {
+    (bucket === "time" ? perUnitTime : perUnitCons)[unitId] += amount;
+    const per = bucket === "time" ? itemTime : itemCons;
+    per[unitId][costId] = (per[unitId][costId] ?? 0) + amount;
+  };
+  const basis = (costId: string, scope: UnitInput[], method: AllocationMethod, portion: number) => {
+    const totalValue = scope.reduce((a, u) => a + weightOf(u, method), 0);
+    for (const u of scope) {
+      (itemBasis[u.id][costId] ??= []).push({ method, portion, unitValue: weightOf(u, method), totalValue });
+    }
+  };
   let totalUmlage = 0;
 
   for (const cost of costs) {
@@ -114,15 +181,18 @@ export function buildStatement(units: UnitInput[], costs: CostInput[]) {
       const share = Math.min(1, Math.max(0, cost.consumptionShare ?? HEATING_CONSUMPTION_SHARE));
       const consAmount = cost.amount * share;
       const baseAmount = cost.amount - consAmount;
-      allocate(baseAmount, "AREA", parts).forEach((r) => (perUnitTime[r.id] += r.amount));
-      allocate(consAmount, "CONSUMPTION", parts).forEach((r) => (perUnitCons[r.id] += r.amount));
+      allocate(baseAmount, "AREA", parts).forEach((r) => add("time", cost.id, r.id, r.amount));
+      allocate(consAmount, "CONSUMPTION", parts).forEach((r) => add("cons", cost.id, r.id, r.amount));
+      basis(cost.id, scope, "AREA", 1 - share);
+      basis(cost.id, scope, "CONSUMPTION", share);
     } else {
       // Nicht-Heizung, oder Heizung ohne Verbrauchsdaten → nach gewählter Methode
       // (CONSUMPTION ohne Zählerdaten fällt auf Fläche zurück).
       const method: AllocationMethod =
         cost.method === "CONSUMPTION" && totalConsumption <= 0 ? "AREA" : cost.method;
-      const bucket = method === "CONSUMPTION" ? perUnitCons : perUnitTime;
-      allocate(cost.amount, method, parts).forEach((r) => (bucket[r.id] += r.amount));
+      const bucket = method === "CONSUMPTION" ? "cons" : "time";
+      allocate(cost.amount, method, parts).forEach((r) => add(bucket, cost.id, r.id, r.amount));
+      basis(cost.id, scope, method, 1);
     }
     totalUmlage += cost.amount;
   }
@@ -140,7 +210,7 @@ export function buildStatement(units: UnitInput[], costs: CostInput[]) {
     const consTotal = perUnitCons[u.id];
 
     if (u.leases.length === 0) {
-      lines.push({ unitId: u.id, leaseId: null, label: u.label, allocated: 0, prepayment: 0, balance: 0 });
+      lines.push({ unitId: u.id, leaseId: null, label: u.label, allocated: 0, prepayment: 0, balance: 0, items: [] });
       continue;
     }
 
@@ -150,7 +220,15 @@ export function buildStatement(units: UnitInput[], costs: CostInput[]) {
       const timePart = timeTotal * (m / 12);
       const consPart = sumMonths > 0 ? consTotal * (m / sumMonths) : 0;
       const allocated = round(timePart + consPart);
+      // nexrees: dieselbe Rechnung je Position; Rundung so, dass die Summe `allocated` trifft.
+      const costIds = Object.keys(itemBasis[u.id]);
+      const raw = costIds.map(
+        (id) => (itemTime[u.id][id] ?? 0) * (m / 12) + (sumMonths > 0 ? (itemCons[u.id][id] ?? 0) * (m / sumMonths) : 0),
+      );
+      const amounts = roundToTarget(raw, allocated);
+      const items = costIds.map((costId, i) => ({ costId, basis: itemBasis[u.id][costId], amount: amounts[i] }));
       lines.push({
+        items,
         unitId: u.id,
         leaseId: lease.id,
         label: u.label,

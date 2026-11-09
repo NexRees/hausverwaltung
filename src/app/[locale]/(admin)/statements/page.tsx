@@ -1,6 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
-import { Printer } from "lucide-react";
-import { requireUser } from "@/lib/rbac";
+import { FileText, Printer } from "lucide-react";
+import { requireUser, roleAllows, WRITE_ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { money } from "@/lib/format";
 import { computeStatement } from "@/server/statements";
@@ -32,6 +32,7 @@ export default async function StatementsPage({
   const t = await getTranslations();
   const locale = await getLocale();
   const tenantId = user.tenantId;
+  const canPdf = roleAllows(user.role, WRITE_ROLES);
 
   const properties = await prisma.property.findMany({
     where: { tenantId },
@@ -170,6 +171,7 @@ export default async function StatementsPage({
                   <TableHead className="text-right">{t("statements.allocated")}</TableHead>
                   <TableHead className="text-right">{t("statements.prepayment")}</TableHead>
                   <TableHead className="text-right">{t("statements.balance")}</TableHead>
+                  {canPdf && <TableHead className="w-10" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -183,6 +185,23 @@ export default async function StatementsPage({
                         {money(l.balance, locale)} · {l.balance >= 0 ? t("statements.credit") : t("statements.arrears")}
                       </Badge>
                     </TableCell>
+                    {/* nexrees: Einzelabrechnung je Mietverhältnis als PDF */}
+                    {canPdf && (
+                      <TableCell>
+                        {l.leaseId && (
+                          <a
+                            href={`/api/statements/pdf?propertyId=${encodeURIComponent(propertyId)}&year=${year}&key=${encodeURIComponent(l.key)}`}
+                            target="_blank"
+                            rel="noopener"
+                            aria-label={t("statements.pdf")}
+                            title={t("statements.pdf")}
+                            className="text-muted-foreground hover:text-foreground inline-flex"
+                          >
+                            <FileText className="size-4" />
+                          </a>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

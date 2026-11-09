@@ -855,7 +855,8 @@
     "mailed": "Abrechnungs-Entwürfe im Postausgang erstellt.",
     "explain": "KI: Abrechnung erklären",
     "explaining": "Erkläre…",
-    "explainHint": "Ohne ANTHROPIC_API_KEY wird nur eine Kurzfassung gezeigt."
+    "explainHint": "Ohne ANTHROPIC_API_KEY wird nur eine Kurzfassung gezeigt.",
+    "pdf": "Abrechnung als PDF"
   },
   "costType": {
     "GRUNDSTEUER": "Grundsteuer",
@@ -975,7 +976,13 @@
     "preview": "Vorschau",
     "edit": "Dokument bearbeiten",
     "linkedTo": "Verknüpft mit",
-    "searchPlaceholder": "Name suchen…"
+    "searchPlaceholder": "Name suchen…",
+    "previewLoading": "Vorschau wird geladen…",
+    "previewFailed": "Vorschau nicht möglich. Bitte herunterladen.",
+    "previewUnsupported": "Für diesen Dateityp gibt es keine Vorschau.",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "pageCount": "{count, plural, one {# Seite} other {# Seiten}}"
   },
   "documentCategory": {
     "VERTRAG": "Vertrag",

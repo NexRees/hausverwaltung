@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { money } from "@/lib/format";
-import { simplePdf } from "@/lib/pdf";
 import { saveFile } from "@/lib/storage";
 import { computeStatement } from "@/server/statements";
+import { statementPdfFor } from "@/server/statement-letter";
 import { queueEmails } from "@/server/outbox";
 import type { ActionState } from "@/lib/schemas";
 
@@ -74,15 +74,8 @@ export async function emailStatementToTenants(_p: ActionState, fd: FormData): Pr
       `Mit freundlichen Grüßen\n${st.property?.tenantName ?? ""}`;
 
     // PDF erzeugen, im Storage ablegen und als Dokument (Kategorie ABRECHNUNG) archivieren.
-    const pdf = simplePdf(`Betriebskostenabrechnung ${year}`, [
-      `${propName} - ${u.label}`,
-      "",
-      `Umgelegte Kosten: ${money(u.allocated)}`,
-      `Vorauszahlungen:  ${money(u.prepayment)}`,
-      `Ergebnis: ${money(Math.abs(u.balance))} ${kind}`,
-      "",
-      "Heiz-/Warmwasserkosten nach HeizkostenV (30% Flaeche / 70% Verbrauch).",
-    ]);
+    // nexrees: Brief mit Einzelaufstellung je Kostenart statt der Ein-Seiten-Summe (simplePdf).
+    const pdf = await statementPdfFor(user.tenantId, st, u, year);
     const name = `Abrechnung ${year} - ${u.label}.pdf`;
     const storageKey = await saveFile(pdf, name);
     const doc = await prisma.document.create({
