@@ -4,7 +4,6 @@ import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { readableForeground } from "@/lib/color";
 import { NotificationBell } from "@/components/notification-bell";
-import { InfoDrawer } from "@/components/info-drawer";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
@@ -12,10 +11,10 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { SearchBox } from "@/components/search-box";
 import { BRAND } from "@/lib/brand";
-import { EnvBadge } from "@/components/env-badge";
+import { envLabel } from "@/components/env-badge";
+import { PageTitle } from "@/components/page-title";
 
 export default async function AdminLayout({
   children,
@@ -54,14 +53,15 @@ export default async function AdminLayout({
       <AppSidebar
         logoUrl={logoUrl}
         superAdmin={user.superAdmin}
-        user={{ name: user.name, email: user.email, role: user.role }}
+        user={{ name: user.name, email: user.email, role: user.role, tenantName: tenant?.name ?? BRAND.name }}
+        envLabel={envLabel()}
       />
       <SidebarInset>
         {/* nexrees: the top bar stays in place while the page scrolls */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-6" />
-          <SearchBox />
+          <PageTitle />
           {user.superAdmin && user.tenantId !== user.homeTenantId && (
             <a
               href="/tenants"
@@ -71,15 +71,14 @@ export default async function AdminLayout({
               ▸ {tenant?.name}
             </a>
           )}
-          <EnvBadge className="ml-2" />
+          {/* nexrees: title left, search right; settings, about, language, theme, version and the
+              environment (e.g. Staging) live in the sidebar account menu */}
           <div className="ml-auto flex items-center gap-1">
-            <InfoDrawer tenantName={tenant?.name ?? BRAND.name} />
+            <SearchBox />
             <NotificationBell items={notifItems} unread={unread} />
-            <LanguageSwitcher />
-            {/* nexrees: theme, settings and the account menu moved to the sidebar footer */}
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main data-page-content className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

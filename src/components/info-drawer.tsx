@@ -19,7 +19,18 @@ const ISSUES_URL = BRAND.issuesUrl;
 const GILDE_URL = "https://www.gilde.org";
 const GILDE_LOGO = "https://www.gilde.org/gilde/logo.svg";
 
-export function InfoDrawer({ tenantName }: { tenantName: string }) {
+// nexrees: `open`/`onOpenChange` let the account menu open the drawer; `hideTrigger` drops the icon button.
+export function InfoDrawer({
+  tenantName,
+  open,
+  onOpenChange,
+  hideTrigger = false,
+}: {
+  tenantName: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+}) {
   const t = useTranslations("about");
 
   const links = [
@@ -30,12 +41,14 @@ export function InfoDrawer({ tenantName }: { tenantName: string }) {
   ];
 
   return (
-    <Sheet>
-      <SheetTrigger
-        render={<Button variant="ghost" size="icon" aria-label={t("title")} title={t("title")} />}
-      >
-        <Info className="size-5" />
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange ? (o) => onOpenChange(o) : undefined}>
+      {!hideTrigger && (
+        <SheetTrigger
+          render={<Button variant="ghost" size="icon" aria-label={t("title")} title={t("title")} />}
+        >
+          <Info className="size-5" />
+        </SheetTrigger>
+      )}
       <SheetContent side="right" className="w-[92vw] gap-0 overflow-y-auto p-0 sm:max-w-sm">
         {/* Kopf: satter Verlauf (unabhängig von der Brandfarbe) + großes Logo */}
         <div className="relative overflow-hidden bg-gradient-to-br from-[#0A0B0E] via-[#111318] to-[#1B2A99] p-6 text-white">
