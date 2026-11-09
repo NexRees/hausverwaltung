@@ -120,6 +120,8 @@ module "stack" {
   github_oidc_provider_arn = var.github_oidc_provider_arn
   # The repository uses GitHub's immutable OIDC subject: pin owner and repository IDs.
   github_ids = { owner = 349533634, repository = 1448272854 }
+  # The "Staging data" workflow loads/removes the 2,000-unit test dataset (one click, Abi 2026-11-09).
+  ci_can_run_tasks = true
 
   budget_monthly_usd = 90
   budget_emails      = var.budget_emails

@@ -60,3 +60,26 @@ resource "aws_iam_role_policy" "ci" {
     ]
   })
 }
+
+# nexrees: staging only. Lets the "Staging data" workflow start one-off tasks of this stack's own
+# task definition in this cluster (load or remove the test dataset) and read their logs.
+resource "aws_iam_role_policy" "ci_run_task" {
+  count = local.ci_enabled && var.ci_can_run_tasks ? 1 : 0
+  name  = "run-one-off-tasks"
+  role  = aws_iam_role.ci[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow", Action = "ecs:RunTask",
+        Resource  = "arn:aws:ecs:${data.aws_region.this.name}:${data.aws_caller_identity.this.account_id}:task-definition/${var.name}:*"
+        Condition = { ArnEquals = { "ecs:cluster" = aws_ecs_cluster.this.arn } }
+      },
+      {
+        Effect    = "Allow", Action = ["ecs:DescribeTasks", "ecs:ListTasks"], Resource = "*"
+        Condition = { ArnEquals = { "ecs:cluster" = aws_ecs_cluster.this.arn } }
+      },
+      { Effect = "Allow", Action = ["logs:GetLogEvents", "logs:FilterLogEvents"], Resource = "${aws_cloudwatch_log_group.app.arn}:*" },
+    ]
+  })
+}

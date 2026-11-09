@@ -1,0 +1,80 @@
+# nexrees: keeps the test dataset (prisma/scale-seed.ts) working as the data model evolves.
+# On every PR that touches the schema, migrations or the seed: migrate an empty Postgres, create a
+# company the way staging does (bootstrap), load a small dataset into it, remove it again and check
+# that the company's own rows are untouched. A schema change that breaks the seed fails here,
+# before it reaches "Staging data".
+name: Seed check
+
+on:
+  pull_request:
+    paths:
+      - "prisma/**"
+      - "src/lib/accounts.ts"
+      - ".github/workflows/nexrees-seed-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: havewa
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/havewa
+      APP_ENV: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npx prisma generate && npx prisma migrate deploy
+
+      - name: Create a company like staging
+        env:
+          ADMIN_EMAIL: admin@nexrees.test
+          ADMIN_PASSWORD: ci-only-password
+          TENANT_NAME: NexRees
+        run: npx tsx prisma/bootstrap.ts
+
+      - name: Load, refuse a second load, remove
+        env:
+          SCALE_TENANT: NexRees
+          SCALE_UNITS: "120"
+          SCALE_YEARS: "1"
+        run: |
+          set -euo pipefail
+          q() { psql "$DATABASE_URL" -tAc "$1"; }
+          before=$(q "select count(*) from \"Account\"")
+          npx tsx prisma/scale-seed.ts
+          units=$(q "select count(*) from \"Unit\"")
+          charges=$(q "select count(*) from \"Charge\"")
+          echo "units=$units charges=$charges"
+          [ "$units" -ge 100 ] && [ "$charges" -gt 0 ] || { echo "::error::seed produced no data"; exit 1; }
+          if npx tsx prisma/scale-seed.ts; then echo "::error::second load should be refused"; exit 1; fi
+          SCALE_RESET=1 npx tsx prisma/scale-seed.ts
+          left=$(q "select count(*) from \"Unit\"")
+          after=$(q "select count(*) from \"Account\"")
+          users=$(q "select count(*) from \"User\"")
+          echo "after reset: units=$left accounts=$after (before $before) users=$users"
+          [ "$left" = 0 ] || { echo "::error::reset left generated units"; exit 1; }
+          [ "$after" = "$before" ] && [ "$users" = 1 ] || { echo "::error::reset touched the company's own data"; exit 1; }
+
+      - name: Standalone scale tenant still works
+        env:
+          SCALE_UNITS: "60"
+          SCALE_YEARS: "1"
+        run: |
+          npx tsx prisma/scale-seed.ts
+          SCALE_RESET=1 npx tsx prisma/scale-seed.ts
