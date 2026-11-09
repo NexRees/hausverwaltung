@@ -27,7 +27,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci --legacy-peer-deps
+      # Same install as the upstream sync: npm 11 without --legacy-peer-deps, so vitest's peer
+      # dependency vite is installed (with --legacy-peer-deps vitest cannot start).
+      - run: npx --yes npm@11 ci
       - run: npx prisma generate
       - run: npm test
 
