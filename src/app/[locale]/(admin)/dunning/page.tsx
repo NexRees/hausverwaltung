@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { openCharges } from "@/server/charge-ledger";
 import { money } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,12 +29,16 @@ export default async function DunningPage({
   const minDays = Math.max(0, Number(sp.minDays) || 0);
   const now = new Date();
 
+  // nexrees: only charges with money still open, computed in Postgres (src/server/charge-ledger.ts).
+  const open = await openCharges(user.tenantId, now);
+  const openById = new Map(open.map((r) => [r.id, r]));
   const charges = await prisma.charge.findMany({
-    where: { tenantId: user.tenantId },
-    include: {
-      payments: { select: { amount: true } },
-      dunnings: { select: { level: true } },
-      lease: { include: { unit: { include: { building: { include: { property: true } } } } } },
+    where: { tenantId: user.tenantId, id: { in: open.map((r) => r.id) } },
+    select: {
+      id: true,
+      leaseId: true,
+      dueDate: true,
+      lease: { select: { unit: { select: { building: { select: { property: { select: { id: true, name: true } } } } } } } },
     },
   });
 
@@ -50,9 +55,9 @@ export default async function DunningPage({
   const map = new Map<string, Row>();
 
   for (const c of charges) {
-    const paid = c.payments.reduce((a, p) => a + Number(p.amount), 0);
-    const open = Number(c.amount) - paid;
-    if (open <= 0.001) continue;
+    const led = openById.get(c.id);
+    if (!led) continue;
+    const open = led.open;
     const verzug = c.dueDate < now ? Math.floor((now.getTime() - c.dueDate.getTime()) / DAY) : 0;
     if (verzug < minDays) continue;
 
@@ -66,7 +71,7 @@ export default async function DunningPage({
     }
     if (c.leaseId) row.debitoren.add(c.leaseId);
     row.opOpen += 1;
-    if (c.dunnings.length > 0) row.opGemahnt += 1;
+    if (led.dunLevel > 0) row.opGemahnt += 1;
     else row.opNichtGemahnt += 1;
     row.maxVerzug = Math.max(row.maxVerzug, verzug);
     row.schuld += open;

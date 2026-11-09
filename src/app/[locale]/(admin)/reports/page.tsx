@@ -2,6 +2,7 @@ import { Download, Building2, DoorOpen, KeyRound, DoorClosed, Coins } from "luci
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { openCharges } from "@/server/charge-ledger";
 import { money } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,17 +35,15 @@ export default async function ReportsPage() {
         leases: { select: { startDate: true, endDate: true } },
       },
     }),
-    prisma.charge.findMany({ where: { tenantId }, include: { payments: { select: { amount: true } } } }),
+    openCharges(tenantId, now), // nexrees: open amounts computed in Postgres (charge-ledger)
   ]);
 
   const occupied = units.filter((u) =>
     u.leases.some((l) => l.startDate <= now && (!l.endDate || l.endDate >= now)),
   );
-  const vacant = units.filter((u) => !occupied.includes(u));
-  const totalOpen = charges.reduce((a, c) => {
-    const open = Number(c.amount) - c.payments.reduce((s, p) => s + Number(p.amount), 0);
-    return a + Math.max(0, open);
-  }, 0);
+  const occupiedIds = new Set(occupied.map((u) => u.id));
+  const vacant = units.filter((u) => !occupiedIds.has(u.id));
+  const totalOpen = charges.reduce((a, c) => a + Math.max(0, c.open), 0);
 
   const kpis = [
     { key: "properties", value: String(properties.length), icon: Building2 },

@@ -46,6 +46,10 @@ what we changed, so every upstream merge stays quick.
 | CI | `.github/workflows/docker-publish.yml` | Image name lowercased (`NexRees` owner; registry names must be lowercase) |
 | CI (new) | `.github/workflows/nexrees-*.yml` | Daily upstream sync, staging deploy, promotion to production (same digest, approval) |
 | AWS | `deploy/aws/` (new) | Terraform for staging and production in AWS Frankfurt; safe deployment profile in its README |
+| Scale (2,000+ units) | `src/lib/list-params.ts`, `src/components/list-filter.tsx`, `src/components/shared-options.tsx` (new); units, leases, persons, tickets, documents pages; `form-fields.tsx`, `lease-/ticket-/document-dialogs`, `payment-dialog-edit.tsx` | Lists are paged (50) with a search box; option lists (people, units, ...) go to the browser once instead of once per row. Before: these pages crashed the server at 2,000 units. See `docs/nexrees/scale-test.md` |
+| Scale: open amounts | `src/server/charge-ledger.ts` (new, + test); finances, dunning, dashboard, reports pages; `bank-sync.ts`, `api-ops.ts`, `api-data.ts`, `export/openitems`, `actions/ai.ts`, `actions/finances.ts` | Paid/open/overdue per charge computed in Postgres instead of loading every charge with its payments (finances 11 s → 0.4 s). Bank/CAMT auto-matching now takes the oldest open charge first. Rent run inserts in one batch |
+| Scale: background jobs | `prisma/schema.prisma` (`JobLease`), migration `20261109120000_nexrees_job_lease`, `src/lib/job-lease.ts` (new), the five `src/lib/*-scheduler.ts` | Only the instance holding the lease runs IMAP, bank, letter, outbox and notification jobs, so production can run 2+ app tasks. Candidate to offer upstream |
+| Scale test data | `prisma/scale-seed.ts` (new) | Synthetic 2,000-unit tenant with 3 years of history for load tests; refuses production |
 
 ## Merging upstream
 

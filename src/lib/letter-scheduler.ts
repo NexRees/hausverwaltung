@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isBankSyncDue as isDailyDue } from "@/lib/bank-scheduler";
 import { refreshLetterStatus } from "@/server/letters";
+import { acquireLease } from "@/lib/job-lease";
 
 // Täglicher Abruf des Briefstatus beim Anbieter (#65), je Mandant abschaltbar.
 // ponytail: ein Prozess, sequentiell (wie Bank-/IMAP-Job); bei mehreren Instanzen Lock nötig.
@@ -12,6 +13,7 @@ async function tick() {
   if (g.__havewaLetterRunning) return;
   g.__havewaLetterRunning = true;
   try {
+    if (!(await acquireLease())) return; // another instance runs the jobs (nexrees: job-lease.ts)
     const tenants = await prisma.tenant.findMany({ where: { letterAutoRefresh: true }, select: { id: true, letterAutoRefreshAt: true } });
     for (const t of tenants) {
       if (!isDailyDue(t.letterAutoRefreshAt)) continue;

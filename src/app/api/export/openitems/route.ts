@@ -1,14 +1,18 @@
 import { auth } from "@/auth";
 import { actingTenantId } from "@/lib/acting-tenant";
 import { prisma } from "@/lib/prisma";
+import { openCharges } from "@/server/charge-ledger";
 import { toCsv, csvResponse } from "@/lib/csv";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
 
+  const tenantId = await actingTenantId(session.user);
+  // nexrees: pre-filter to charges with money open (Postgres), instead of loading every charge
+  const openIds = (await openCharges(tenantId)).map((c) => c.id);
   const charges = await prisma.charge.findMany({
-    where: { tenantId: (await actingTenantId(session.user)) },
+    where: { tenantId, id: { in: openIds } },
     include: {
       payments: { select: { amount: true } },
       lease: { include: { unit: { include: { building: { include: { property: true } } } } } },

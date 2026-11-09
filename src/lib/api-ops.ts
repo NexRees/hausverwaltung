@@ -7,6 +7,7 @@ import { deliverEmail } from "@/server/outbox";
 import { parseCamt053 } from "@/lib/adapters/bankImport";
 import { isEInvoice, parseEInvoice } from "@/lib/adapters/erechnung";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limit";
+import { openCharges } from "@/server/charge-ledger";
 
 // Dedizierte Operationen (kein reines CRUD) für REST-API + MCP.
 // Fachlogik gespiegelt aus den Server Actions, aber Bearer-Auth statt Session.
@@ -202,8 +203,8 @@ export const OPERATIONS: Record<string, Op> = {
         throw new ApiWriteError("camt.053 konnte nicht gelesen werden", 400);
       }
       if (entries.length === 0) throw new ApiWriteError("Keine Buchungen in der Datei", 400);
-      const charges = await prisma.charge.findMany({ where: { tenantId: p.tenantId }, include: { payments: { select: { amount: true } } } });
-      const openMap = charges.map((c) => ({ id: c.id, open: Number(c.amount) - c.payments.reduce((x, pay) => x + Number(pay.amount), 0) }));
+      // nexrees: open charges only (oldest first), computed in Postgres
+      const openMap = (await openCharges(p.tenantId)).map((c) => ({ id: c.id, open: c.open }));
       let matched = 0;
       for (const e of entries) {
         let chargeId: string | null = null;

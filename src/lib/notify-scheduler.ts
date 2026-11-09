@@ -1,4 +1,5 @@
 import { runAllNotifications } from "@/server/notifications";
+import { acquireLease } from "@/lib/job-lease";
 
 // E-Mail-Benachrichtigungen (#77): alle 5 Minuten das neue Zeitfenster prüfen.
 // ponytail: ein Prozess (wie Bank-/IMAP-Job); bei mehreren Instanzen doppelte Mails, dann Lock nötig.
@@ -10,6 +11,7 @@ async function tick() {
   if (g.__havewaNotifyRunning) return;
   g.__havewaNotifyRunning = true;
   try {
+    if (!(await acquireLease())) return; // another instance runs the jobs (nexrees: job-lease.ts)
     await runAllNotifications();
   } catch (e) {
     console.warn("[notify] Lauf fehlgeschlagen:", e instanceof Error ? e.message : e);

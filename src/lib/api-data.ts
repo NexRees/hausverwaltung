@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { openCharges } from "@/server/charge-ledger";
 
 // Geteilte, mandanten-gescopte Datenschicht für REST-API und MCP-Server.
 // Alle Funktionen erhalten die tenantId aus dem authentifizierten Token.
@@ -118,8 +119,10 @@ export async function listTickets(tenantId: string) {
 }
 
 export async function listOpenItems(tenantId: string) {
+  // nexrees: pre-filter to charges with money open (Postgres), instead of loading every charge
+  const openIds = (await openCharges(tenantId)).map((c) => c.id);
   const charges = await prisma.charge.findMany({
-    where: { tenantId },
+    where: { tenantId, id: { in: openIds } },
     include: {
       payments: { select: { amount: true } },
       lease: { include: { unit: { include: { building: { include: { property: { select: { name: true } } } } } } } },

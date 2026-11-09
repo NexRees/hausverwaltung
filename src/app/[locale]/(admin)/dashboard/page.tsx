@@ -17,6 +17,7 @@ import {
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { openCharges } from "@/server/charge-ledger";
 import { money, date, intlLocale } from "@/lib/format";
 import { getDateLocale } from "@/lib/date-locale";
 import {
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
   const in90 = new Date(now.getTime() + 90 * 864e5);
   const in30 = new Date(now.getTime() + 30 * 864e5);
 
-  const [properties, units, leases, charges, openTickets, maintenance, tasks, paymentsRecent, expiringLeases, upcomingMaint] = await Promise.all([
+  const [properties, units, leases, charges, open, openTickets, maintenance, tasks, paymentsRecent, expiringLeases, upcomingMaint] = await Promise.all([
     prisma.property.findMany({
       where: { tenantId },
       include: { buildings: { include: { _count: { select: { units: true } } } } },
@@ -70,7 +71,9 @@ export default async function DashboardPage() {
       where: { tenantId, startDate: { lte: now }, OR: [{ endDate: null }, { endDate: { gte: now } }] },
       include: { components: { select: { amount: true } } },
     }),
-    prisma.charge.findMany({ where: { tenantId }, include: { payments: { select: { amount: true } } } }),
+    // nexrees: only the last six months feed the chart; open totals come from Postgres (charge-ledger)
+    prisma.charge.findMany({ where: { tenantId, period: { gte: sixMonthsAgo } }, select: { period: true, amount: true } }),
+    openCharges(tenantId, now),
     prisma.ticket.count({ where: { tenantId, status: { not: "ERLEDIGT" } } }),
     prisma.maintenanceContract.findMany({ where: { tenantId, nextDue: { lt: now } }, select: { id: true } }),
     prisma.task.findMany({ where: { tenantId, done: false }, orderBy: [{ dueDate: "asc" }], take: 8 }),
@@ -92,12 +95,9 @@ export default async function DashboardPage() {
   );
   let totalOpen = 0;
   let overdueCount = 0;
-  for (const c of charges) {
-    const open = Number(c.amount) - c.payments.reduce((a, p) => a + Number(p.amount), 0);
-    if (open > 0.001) {
-      totalOpen += open;
-      if (c.dueDate < now) overdueCount++;
-    }
+  for (const c of open) {
+    totalOpen += c.open;
+    if (c.status === "OVERDUE") overdueCount++;
   }
   const dueMaintenance = maintenance.length;
 

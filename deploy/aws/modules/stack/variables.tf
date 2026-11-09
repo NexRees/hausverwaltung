@@ -91,7 +91,7 @@ variable "task_memory" {
 }
 
 variable "desired_count" {
-  description = "Running app tasks. Keep 1 until the in-app scheduler runs on one task only (HAVEWA_DISABLE_SCHEDULER on the others)."
+  description = "Running app tasks. 2+ is safe: background jobs run on one task only (JobLease in the database)."
   type        = number
   default     = 1
 }

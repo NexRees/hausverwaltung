@@ -17,24 +17,39 @@ import { PersonDialog } from "@/components/entity-dialogs";
 import { ImportDialog } from "@/components/import-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { deletePerson } from "@/server/actions/persons";
+import { Pager } from "@/components/pager";
+import { ListFilter } from "@/components/list-filter";
+import { listParams, listHref, pageCount, icontains } from "@/lib/list-params";
 
 const GROUPS = ["MIETER", "EIGENTUEMER", "INTERESSENT", "HANDWERKER", "MAKLER", "BANK", "SONSTIGE"] as const;
 
 export default async function PersonsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; q?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const user = await requireUser();
   const t = await getTranslations();
   const active = GROUPS.includes(sp.type as (typeof GROUPS)[number]) ? sp.type : undefined;
+  // nexrees: paged + searchable, option lists shared via SharedOptionsProvider (scale test)
+  const lp = listParams(sp);
+  const where = {
+    tenantId: user.tenantId,
+    ...(active ? { type: active as (typeof GROUPS)[number] } : {}),
+    ...(lp.q
+      ? { OR: [{ lastName: icontains(lp.q) }, { firstName: icontains(lp.q) }, { email: icontains(lp.q) }, { phone: icontains(lp.q) }] }
+      : {}),
+  };
 
-  const [persons, customDefs] = await Promise.all([
+  const [persons, total, customDefs] = await Promise.all([
     prisma.person.findMany({
-      where: { tenantId: user.tenantId, ...(active ? { type: active as (typeof GROUPS)[number] } : {}) },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      where,
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
+      skip: lp.skip,
+      take: lp.take,
     }),
+    prisma.person.count({ where }),
     prisma.customFieldDef.findMany({
       where: { tenantId: user.tenantId, entity: "PERSON" },
       orderBy: { createdAt: "asc" },
@@ -81,6 +96,8 @@ export default async function PersonsPage({
           </Button>
         ))}
       </div>
+
+      <ListFilter q={lp.q} keep={{ type: active }} total={total} />
 
       <Card>
         <CardContent className="p-0">
@@ -144,6 +161,7 @@ export default async function PersonsPage({
           )}
         </CardContent>
       </Card>
+      <Pager page={lp.page} pages={pageCount(total)} href={(p) => listHref("/persons", { type: active, q: lp.q }, p)} />
     </div>
   );
 }

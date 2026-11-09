@@ -18,14 +18,35 @@ import { LeaseDialog } from "@/components/lease-dialogs";
 import { ImportDialog } from "@/components/import-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteUnit } from "@/server/actions/objects";
+import { Pager } from "@/components/pager";
+import { ListFilter } from "@/components/list-filter";
+import { SharedOptionsProvider } from "@/components/shared-options";
+import { listParams, listHref, pageCount, icontains } from "@/lib/list-params";
 
-export default async function UnitsPage() {
+export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const user = await requireUser();
   const t = await getTranslations();
+  // nexrees: paged + searchable, option lists shared via SharedOptionsProvider (scale test)
+  const lp = listParams(await searchParams);
+  const where = {
+    tenantId: user.tenantId,
+    ...(lp.q
+      ? {
+          OR: [
+            { label: icontains(lp.q) },
+            { building: { name: icontains(lp.q) } },
+            { building: { property: { name: icontains(lp.q) } } },
+            { leases: { some: { renters: { some: { person: { lastName: icontains(lp.q) } } } } } },
+          ],
+        }
+      : {}),
+  };
 
-  const [units, customDefs, leaseDefs, persons, properties] = await Promise.all([
+  const [units, total, customDefs, leaseDefs, persons, properties] = await Promise.all([
     prisma.unit.findMany({
-      where: { tenantId: user.tenantId },
+      where,
+      skip: lp.skip,
+      take: lp.take,
       include: {
         building: { include: { property: true } },
         leases: {
@@ -36,8 +57,9 @@ export default async function UnitsPage() {
           },
         },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
+    prisma.unit.count({ where }),
     prisma.customFieldDef.findMany({
       where: { tenantId: user.tenantId, entity: "UNIT" },
       orderBy: { createdAt: "asc" },
@@ -85,6 +107,7 @@ export default async function UnitsPage() {
   };
 
   return (
+    <SharedOptionsProvider lists={{ persons: personOpts }}>
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -99,6 +122,8 @@ export default async function UnitsPage() {
           {buildingOpts.length > 0 && <UnitDialog buildings={buildingOpts} customDefs={customDefs} />}
         </div>
       </div>
+
+      <ListFilter q={lp.q} total={total} />
 
       <Card>
         <CardContent className="p-0">
@@ -147,7 +172,7 @@ export default async function UnitsPage() {
                         {!occupied(u.leases) && (
                           <LeaseDialog
                             presetUnitId={u.id}
-                            persons={personOpts}
+                            persons="persons"
                             customDefs={leaseDefs}
                             triggerLabel={t("units.assignTenant")}
                           />
@@ -175,6 +200,8 @@ export default async function UnitsPage() {
           )}
         </CardContent>
       </Card>
+      <Pager page={lp.page} pages={pageCount(total)} href={(p) => listHref("/units", { q: lp.q }, p)} />
     </div>
+    </SharedOptionsProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { SharedCheckboxes, SharedOptionElements } from "@/components/shared-options";
 
 export function TextField({
   name,
@@ -94,28 +95,18 @@ export function MultiSelectField({
 }: {
   name: string;
   label: string;
-  options: { value: string; label: string }[];
+  /** nexrees: the options, or the name of a list from <SharedOptionsProvider>. */
+  options: { value: string; label: string }[] | string;
   defaultValues?: string[];
 }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-input p-2 dark:bg-input/30">
-        {options.length === 0 ? (
-          <p className="px-1 text-sm text-muted-foreground">—</p>
+        {typeof options === "string" ? (
+          <SharedCheckboxes list={options} name={name} defaultValues={defaultValues} />
         ) : (
-          options.map((o) => (
-            <label key={o.value} className="flex items-center gap-2 px-1 py-0.5 text-sm">
-              <input
-                type="checkbox"
-                name={name}
-                value={o.value}
-                defaultChecked={defaultValues.includes(o.value)}
-                className="size-4 rounded border-input"
-              />
-              {o.label}
-            </label>
-          ))
+          <SharedCheckboxes options={options} name={name} defaultValues={defaultValues} />
         )}
       </div>
     </div>
@@ -126,11 +117,15 @@ export function SelectField({
   name,
   label,
   options,
+  leading = [],
   defaultValue,
 }: {
   name: string;
   label: string;
-  options: { value: string; label: string }[];
+  /** nexrees: the options, or the name of a list from <SharedOptionsProvider>. */
+  options: { value: string; label: string }[] | string;
+  /** Options shown before `options`, e.g. "none". */
+  leading?: { value: string; label: string }[];
   defaultValue?: string;
 }) {
   return (
@@ -146,11 +141,20 @@ export function SelectField({
           "dark:bg-input/30",
         )}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
+        {leading.map((o) => (
+          <option key={`lead-${o.value}`} value={o.value}>
             {o.label}
           </option>
         ))}
+        {typeof options === "string" ? (
+          <SharedOptionElements list={options} />
+        ) : (
+          options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))
+        )}
       </select>
     </div>
   );

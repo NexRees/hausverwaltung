@@ -149,6 +149,9 @@ locals {
     ADMIN_EMAIL       = local.admin.email
     ADMIN_NAME        = local.admin.name
     TENANT_NAME       = var.tenant_name
+    # Node's heap limit at 75% of the task memory: a runaway page then fails one request with a
+    # clear "heap out of memory" instead of the container being killed by ECS.
+    NODE_OPTIONS = "--max-old-space-size=${floor(var.task_memory * 0.75)}"
     }, var.sso == null ? {} : {
     OIDC_NAME                  = var.sso.name
     OIDC_ISSUER                = var.sso.issuer

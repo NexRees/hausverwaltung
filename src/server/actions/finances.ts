@@ -19,6 +19,7 @@ import { saveFile } from "@/lib/storage";
 import { money } from "@/lib/format";
 import { dunningFor } from "@/server/dunning";
 import { queueEmails } from "@/server/outbox";
+import { openCharges } from "@/server/charge-ledger";
 
 // Standard-Kontenrahmen für den Mandanten anlegen (idempotent).
 export async function seedDefaultAccounts(): Promise<void> {
@@ -92,22 +93,18 @@ export async function generateCharges(_p: ActionState, fd: FormData): Promise<Ac
     include: { components: { select: { amount: true } }, charges: { where: { period: first, type: "MIETE" }, select: { id: true } } },
   });
 
-  let created = 0;
-  for (const l of leases) {
-    if (l.charges.length > 0) continue; // schon vorhanden
-    const warm = Number(l.rentCold) + l.components.reduce((a, c) => a + Number(c.amount), 0);
-    await prisma.charge.create({
-      data: {
-        tenantId: user.tenantId,
-        leaseId: l.id,
-        type: "MIETE",
-        period: first,
-        dueDate: due,
-        amount: warm,
-      },
-    });
-    created++;
-  }
+  // nexrees: one batched insert instead of one round trip per lease (2,000+ leases).
+  const data = leases
+    .filter((l) => l.charges.length === 0) // schon vorhanden
+    .map((l) => ({
+      tenantId: user.tenantId,
+      leaseId: l.id,
+      type: "MIETE" as const,
+      period: first,
+      dueDate: due,
+      amount: Number(l.rentCold) + l.components.reduce((a, c) => a + Number(c.amount), 0),
+    }));
+  let created = data.length ? (await prisma.charge.createMany({ data })).count : 0;
   created += await generateAreaCharges(user.tenantId, first, due, last);
   revalidatePath("/", "layout");
   return { ok: true, error: created === 0 ? "Keine neuen Sollstellungen (bereits vorhanden)" : undefined };
@@ -185,14 +182,8 @@ export async function importCamt(_p: ActionState, fd: FormData): Promise<ActionS
   if (entries.length === 0) return fail("Keine Buchungen in der Datei");
 
   // offene Beträge je Sollstellung für Auto-Matching
-  const charges = await prisma.charge.findMany({
-    where: { tenantId: user.tenantId },
-    include: { payments: { select: { amount: true } } },
-  });
-  const openMap = charges.map((c) => ({
-    id: c.id,
-    open: Number(c.amount) - c.payments.reduce((a, p) => a + Number(p.amount), 0),
-  }));
+  // nexrees: open charges only (oldest first), computed in Postgres
+  const openMap = (await openCharges(user.tenantId)).map((c) => ({ id: c.id, open: c.open }));
 
   let matched = 0;
   for (const e of entries) {
