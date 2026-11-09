@@ -201,6 +201,10 @@ model User {
   apiTokens    ApiToken[]
   notifications Notification[]
   sentEmails   EmailMessage[]
+  // nexrees: collaboration (tasks handed between colleagues, comments)
+  assignedTasks Task[]    @relation("TaskAssignee")
+  createdTasks  Task[]    @relation("TaskCreator")
+  comments      Comment[]
   createdAt    DateTime @default(now())
 
   @@index([tenantId])
@@ -767,8 +771,38 @@ model Task {
   dueDate   DateTime?
   done      Boolean   @default(false)
   createdAt DateTime  @default(now())
+  // nexrees: collaboration. Who does it, who handed it over, which record it belongs to.
+  description String?
+  assigneeId  String?
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?     @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  entity      String? // "Property" | "Unit" | "Lease" | "Person" (same names as AuditLog.entity)
+  entityId    String?
+  propertyId  String? // resolved at write time for per-property access rules; null for Person
+  doneAt      DateTime?
 
   @@index([tenantId])
+  @@index([tenantId, assigneeId, done])
+  @@index([tenantId, entity, entityId])
+}
+
+// nexrees: comment on a record, shown in its timeline together with tasks and the audit log.
+model Comment {
+  id         String   @id @default(cuid())
+  tenantId   String
+  entity     String // "Property" | "Unit" | "Lease" | "Person"
+  entityId   String
+  propertyId String? // resolved at write time for per-property access rules; null for Person
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName String // kept when the user is deleted
+  body       String
+  mentions   String[] // user ids notified by @mention
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, entity, entityId, createdAt])
+  @@index([tenantId, createdAt])
 }
 
 // ---------- Instandhaltung ----------
@@ -1058,6 +1092,7 @@ model AuditLog {
 
   @@index([tenantId])
   @@index([createdAt])
+  @@index([tenantId, entity, entityId]) // nexrees: record timeline
 }
 
 // ---------- E-Mail-Postausgang ----------

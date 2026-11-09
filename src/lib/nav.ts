@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Handshake,
   Building,
+  Inbox,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,6 +35,7 @@ export const navGroups: NavGroup[] = [
     labelKey: "nav.groupManagement",
     items: [
       { key: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { key: "nav.myWork", href: "/my-work", icon: Inbox }, // nexrees: tasks, tickets and mentions for me
       { key: "nav.properties", href: "/properties", icon: Building2 },
       { key: "nav.units", href: "/units", icon: DoorOpen },
       { key: "nav.persons", href: "/persons", icon: Users },

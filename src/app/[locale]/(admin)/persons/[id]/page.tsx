@@ -2,6 +2,7 @@ import { ArrowLeft, Landmark, Mail, MapPin, Phone } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { requireUser, roleAllows, WRITE_ROLES } from "@/lib/rbac";
+import { RecordTimeline } from "@/components/record-timeline"; // nexrees
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { money, date, dateTime, decimal } from "@/lib/format";
@@ -343,6 +344,8 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
           </CardContent>
         </Card>
       )}
+      {/* nexrees: tasks, comments and history of this record */}
+      <RecordTimeline user={user} entity="Person" entityId={person.id} />
     </div>
     </AttachmentImportProvider>
   );
