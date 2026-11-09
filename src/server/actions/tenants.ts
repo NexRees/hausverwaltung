@@ -8,6 +8,7 @@ import { requireSuperAdmin } from "@/lib/rbac";
 import { ensureDefaultAccounts } from "@/lib/accounts";
 import { ACTING_TENANT_COOKIE } from "@/lib/acting-tenant";
 import { passwordProblem } from "@/lib/password-policy";
+import { asPurge } from "@/server/ledger";
 import type { ActionState } from "@/lib/schemas";
 
 // Neuen Mandanten + ersten Admin anlegen (nur Instanz-Admin).
@@ -55,6 +56,8 @@ export async function deleteTenant(fd: FormData): Promise<void> {
   const id = String(fd.get("id") ?? "");
   if (!id || id === user.homeTenantId) return; // eigenen Mandanten nie löschen
   if (id === user.tenantId) (await cookies()).delete(ACTING_TENANT_COOKIE); // ggf. Wechsel aufheben
-  await prisma.tenant.delete({ where: { id } }).catch(() => {});
+  // nexrees: deleting a whole company bypasses the period lock and journal (offboarding); the
+  // tenant's own audit log is kept (no foreign key) for the legal retention period.
+  await asPurge((tx) => tx.tenant.delete({ where: { id } })).catch(() => {});
   revalidatePath("/", "layout");
 }

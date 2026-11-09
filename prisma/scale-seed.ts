@@ -89,12 +89,20 @@ async function reset() {
     : await prisma.tenant.findMany({ where: { name: TENANT_NAME }, select: { id: true } });
   if (INTO && tenants.length !== 1) throw new Error(`SCALE_TENANT "${INTO}": expected exactly one tenant, found ${tenants.length}`);
   for (const t of tenants) {
-    for (const model of RESET_ORDER) {
-      const delegate = (prisma as unknown as Record<string, { deleteMany(a: unknown): Promise<{ count: number }> }>)[model];
-      const r = await delegate.deleteMany({ where: { tenantId: t.id, id: { startsWith: ID_PREFIX } } });
-      if (r.count) console.log(`  removed ${model.padEnd(20)} ${r.count}`);
-    }
-    if (!INTO) await prisma.tenant.delete({ where: { id: t.id } });
+    // nexrees: generated test data is purged, not journaled, and ignores the period lock
+    // (DB triggers of migration 20261109200000_nexrees_bookkeeping_integrity).
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT set_config('nexrees.purge', 'on', true)`;
+        for (const model of RESET_ORDER) {
+          const delegate = (tx as unknown as Record<string, { deleteMany(a: unknown): Promise<{ count: number }> }>)[model];
+          const r = await delegate.deleteMany({ where: { tenantId: t.id, id: { startsWith: ID_PREFIX } } });
+          if (r.count) console.log(`  removed ${model.padEnd(20)} ${r.count}`);
+        }
+        if (!INTO) await tx.tenant.delete({ where: { id: t.id } });
+      },
+      { timeout: 600_000, maxWait: 30_000 },
+    );
   }
   console.log(INTO ? `removed the generated data from "${INTO}"` : `removed ${tenants.length} scale tenant(s)`);
 }

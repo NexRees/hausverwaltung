@@ -20,3 +20,17 @@ describe("depositInterest", () => {
     expect(i).toBeLessThan(25);
   });
 });
+
+describe("nexrees: compounding and § 551 cap", () => {
+  it("compounds yearly (interest increases the deposit)", async () => {
+    // 1000 at 10 % for 2 years: 1000 * 1.1^2 - 1000 = 210 (simple interest would be 200)
+    expect(depositInterest(1000, 10, new Date("2024-01-01"), new Date("2025-12-31"))).toBe(210);
+  });
+
+  it("caps residential deposits at three months' net cold rent", async () => {
+    const { depositCapProblem } = await import("./deposit");
+    expect(depositCapProblem(2400, 800, "WOHNUNG")).toBeNull();
+    expect(depositCapProblem(2400.01, 800, "WOHNUNG")).toMatch(/§ 551/);
+    expect(depositCapProblem(5000, 800, "GEWERBE")).toBeNull();
+  });
+});

@@ -1338,5 +1338,25 @@
     "kindHint_ISSUE_REPORTED": "A tenant reports damage through the portal",
     "kind_INBOUND_EMAIL": "Incoming emails",
     "kindHint_INBOUND_EMAIL": "New mails in the inbox (IMAP fetch)"
+  },
+  "nexrees": {
+    "bookkeeping": {
+      "tab": "Bookkeeping",
+      "lockTitle": "Period close (GoBD)",
+      "lockHint": "Bookings up to and including this day are locked: charges, payments, costs and reserve bookings can no longer be created, changed or deleted, not even through the API. Corrections are made as new bookings in the open period. This cannot be undone.",
+      "lockedUntil": "Closed until",
+      "notLocked": "Nothing closed yet.",
+      "lockUntil": "Close up to and including",
+      "lockButton": "Close period",
+      "lockConfirm": "Close this period for good? This cannot be undone.",
+      "locked": "Closed",
+      "sepaTitle": "SEPA direct debit",
+      "sepaHint": "Creditor identifier (Deutsche Bundesbank) and the account the money is collected to. Without valid details no direct debit file is created.",
+      "creditorId": "Creditor ID",
+      "creditorIban": "Creditor account IBAN",
+      "creditorBic": "BIC (optional)",
+      "save": "Save",
+      "saved": "Saved"
+    }
   }
 }

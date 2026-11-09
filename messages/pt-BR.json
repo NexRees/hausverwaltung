@@ -1338,5 +1338,25 @@
     "kindHint_ISSUE_REPORTED": "Inquilino relata um dano pelo portal",
     "kind_INBOUND_EMAIL": "E-mails recebidos",
     "kindHint_INBOUND_EMAIL": "Novos e-mails na caixa de entrada (IMAP)"
+  },
+  "nexrees": {
+    "bookkeeping": {
+      "tab": "Contabilidade",
+      "lockTitle": "Fechamento de período (GoBD)",
+      "lockHint": "Lançamentos até este dia (inclusive) ficam bloqueados: cobranças, pagamentos, custos e lançamentos de reserva não podem mais ser criados, alterados ou excluídos, nem pela API. Correções são feitas como novos lançamentos no período aberto. Não pode ser desfeito.",
+      "lockedUntil": "Fechado até",
+      "notLocked": "Nada fechado ainda.",
+      "lockUntil": "Fechar até (inclusive)",
+      "lockButton": "Fechar período",
+      "lockConfirm": "Fechar este período definitivamente? Não pode ser desfeito.",
+      "locked": "Fechado",
+      "sepaTitle": "Débito direto SEPA",
+      "sepaHint": "Identificador de credor (Deutsche Bundesbank) e a conta para a qual o dinheiro é cobrado. Sem dados válidos nenhum arquivo de débito é criado.",
+      "creditorId": "ID do credor",
+      "creditorIban": "IBAN da conta do credor",
+      "creditorBic": "BIC (opcional)",
+      "save": "Salvar",
+      "saved": "Salvo"
+    }
   }
 }

@@ -181,6 +181,14 @@ model Tenant {
   // true bei geseedeten Demo-Daten → öffentliche Marketing-Seite als Fallback
   isDemo Boolean @default(false)
 
+  // nexrees: Festschreibung (GoBD). Buchungen bis einschließlich dieses Tages sind gesperrt;
+  // durchgesetzt per DB-Trigger (Migration 20261109200000_nexrees_bookkeeping_integrity).
+  bookingsLockedUntil DateTime?
+  // nexrees: SEPA-Lastschrift: Gläubiger-ID, Konto des Gläubigers (pain.008)
+  sepaCreditorId   String?
+  sepaCreditorIban String?
+  sepaCreditorBic  String?
+
   bankConnector BankConnector?
 }
 
@@ -708,6 +716,7 @@ model SepaMandate {
   mandateRef String
   signedDate DateTime
   active     Boolean  @default(true)
+  lastCollectedAt DateTime? // nexrees: letzter Einzug → Sequenz FRST (nie) / RCUR
   createdAt  DateTime @default(now())
 
   @@index([tenantId])
@@ -1054,10 +1063,15 @@ model AuditLog {
   entity   String // Modellname, z. B. "Property"
   entityId String?
   summary  String? // menschenlesbare Kurzbeschreibung
+  // nexrees: Vorher/Nachher-Abbild (DB-Journal) und Herkunft ("ui", "api:<Token>", "db")
+  before   Json?
+  after    Json?
+  source   String?
   createdAt DateTime   @default(now())
 
   @@index([tenantId])
   @@index([createdAt])
+  @@index([tenantId, entity, entityId])
 }
 
 // ---------- E-Mail-Postausgang ----------

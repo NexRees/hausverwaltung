@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { pingAi, aiResidencyProblem } from "@/lib/ai";
 import { encryptSecret, openSecret } from "@/lib/crypto";
+import { creditorIdValid, ibanValid, bicValid, normalizeIban } from "@/lib/sepa-validate";
 import { verifyMailer } from "@/lib/adapters/mailer";
 import { verifyImap } from "@/lib/adapters/imap";
 import { clampSyncInterval, clampAttachMaxMb } from "@/lib/inbound";
@@ -207,4 +208,43 @@ export async function testImapConfig(_p: ActionState, _fd: FormData): Promise<Ac
   } catch (e) {
     return { error: e instanceof Error ? e.message : "IMAP-Test fehlgeschlagen" };
   }
+}
+
+// --- nexrees: Buchhaltung (Festschreibung, SEPA-Gläubigerdaten) ---
+
+export async function updateBookkeepingConfig(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const user = await requireRole(["ADMIN"]);
+  const creditorId = str(fd.get("sepaCreditorId"))?.replace(/\s+/g, "").toUpperCase();
+  const iban = str(fd.get("sepaCreditorIban"));
+  const bic = str(fd.get("sepaCreditorBic"))?.replace(/\s+/g, "").toUpperCase();
+  if (creditorId && !creditorIdValid(creditorId)) return { error: "Gläubiger-ID ist ungültig (Prüfziffer)." };
+  if (iban && !ibanValid(iban)) return { error: "Gläubiger-IBAN ist ungültig (Prüfziffer)." };
+  if (bic && !bicValid(bic)) return { error: "BIC ist ungültig." };
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: { sepaCreditorId: creditorId ?? null, sepaCreditorIban: iban ? normalizeIban(iban) : null, sepaCreditorBic: bic ?? null },
+  });
+  await audit(user, "UPDATE", "Tenant", user.tenantId, "SEPA-Gläubigerdaten");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Festschreibung: closes all bookings up to and including the given day. Cannot be undone. */
+export async function lockBookings(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const user = await requireRole(["ADMIN"]);
+  const raw = str(fd.get("lockUntil"));
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { error: "Bitte ein Datum wählen." };
+  const until = new Date(`${raw}T00:00:00Z`);
+  const today = new Date();
+  if (until.getTime() >= Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())) {
+    return { error: "Festschreiben ist nur für vergangene Tage möglich." };
+  }
+  const t = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { bookingsLockedUntil: true } });
+  if (t?.bookingsLockedUntil && until <= t.bookingsLockedUntil) {
+    return { error: "Dieser Zeitraum ist bereits festgeschrieben. Ein festgeschriebener Zeitraum kann nicht wieder geöffnet werden." };
+  }
+  await prisma.tenant.update({ where: { id: user.tenantId }, data: { bookingsLockedUntil: until } });
+  await audit(user, "UPDATE", "Tenant", user.tenantId, `Buchungen festgeschrieben bis ${raw}`);
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

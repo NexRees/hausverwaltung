@@ -20,6 +20,7 @@ import { money } from "@/lib/format";
 import { dunningFor } from "@/server/dunning";
 import { queueEmails } from "@/server/outbox";
 import { openCharges } from "@/server/charge-ledger";
+import { bookAs } from "@/server/ledger";
 
 // Standard-Kontenrahmen für den Mandanten anlegen (idempotent).
 export async function seedDefaultAccounts(): Promise<void> {
@@ -54,9 +55,12 @@ export async function updateAccount(_p: ActionState, fd: FormData): Promise<Acti
   await prisma.account.update({ where: { id: acc.id }, data: { name: r.data.name, type: r.data.type, iban: r.data.iban ?? null } });
   return done();
 }
-export async function deleteAccount(fd: FormData): Promise<void> {
+// nexrees: cascades into booked rows; refused with a message when they are in a closed period
+export async function deleteAccount(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.account.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.account.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 
@@ -65,12 +69,16 @@ export async function createCharge(_p: ActionState, fd: FormData): Promise<Actio
   const user = await requireWriter();
   const r = chargeSchema.safeParse(Object.fromEntries(fd));
   if (!r.success) return fail(r.error.issues[0]?.message);
-  await prisma.charge.create({ data: { ...r.data, tenantId: user.tenantId } });
-  return done();
+  // nexrees: through bookAs so a closed period (Festschreibung) is refused with a clear message
+  const locked = await bookAs(user, (tx) => tx.charge.create({ data: { ...r.data, tenantId: user.tenantId } }));
+  return locked ?? done();
 }
-export async function deleteCharge(fd: FormData): Promise<void> {
+// nexrees: deletion only in an open period; the database journals the full record (GoBD).
+export async function deleteCharge(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.charge.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.charge.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 
@@ -120,12 +128,15 @@ export async function createPayment(_p: ActionState, fd: FormData): Promise<Acti
     const c = await prisma.charge.findFirst({ where: { id: r.data.chargeId, tenantId: user.tenantId }, select: { id: true } });
     if (!c) return fail("Sollstellung nicht gefunden");
   }
-  await prisma.payment.create({ data: { ...r.data, tenantId: user.tenantId } });
-  return done();
+  const locked = await bookAs(user, (tx) => tx.payment.create({ data: { ...r.data, tenantId: user.tenantId } })); // nexrees
+  return locked ?? done();
 }
-export async function deletePayment(fd: FormData): Promise<void> {
+// nexrees: deletion only in an open period; the database journals the full record (GoBD).
+export async function deletePayment(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.payment.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.payment.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 

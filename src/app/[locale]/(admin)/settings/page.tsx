@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { UserDialog, EditUserDialog, ResetPasswordDialog } from "@/components/user-dialogs";
 import { SettingsConfig } from "@/components/settings-config";
+import { BookkeepingConfig } from "@/components/bookkeeping-config";
+import { maxLockDate } from "@/server/ledger";
 import { OutboxConfig } from "@/components/outbox-config";
 import { NotifyConfig } from "@/components/notify-config";
 import { isMailerConfigured } from "@/lib/adapters/mailer";
@@ -252,6 +254,20 @@ export default async function SettingsPage() {
             vendorId: tenant.epostVendorId, ekp: tenant.epostEkp, test: tenant.epostTest,
             hasPassword: !!tenant.epostPasswordEnc, hasSecret: !!tenant.epostSecretEnc,
           }}
+        />
+      ),
+    });
+  }
+  if (isAdmin && tenant) {
+    // nexrees: Festschreibung (GoBD) and SEPA creditor data
+    tabs.push({
+      value: "bookkeeping",
+      label: t("nexrees.bookkeeping.tab"),
+      content: (
+        <BookkeepingConfig
+          lockedUntil={tenant.bookingsLockedUntil ? tenant.bookingsLockedUntil.toISOString().slice(0, 10) : null}
+          maxLock={maxLockDate()}
+          sepa={{ creditorId: tenant.sepaCreditorId, iban: tenant.sepaCreditorIban, bic: tenant.sepaCreditorBic }}
         />
       ),
     });

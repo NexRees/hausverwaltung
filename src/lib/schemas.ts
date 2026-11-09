@@ -2,6 +2,7 @@ import { z } from "zod";
 import { routing } from "@/i18n/routing";
 import { normalizePostalAddress, postalAddressError } from "@/lib/postal-address";
 import { passwordProblem } from "@/lib/password-policy";
+import { ibanValid, normalizeIban } from "@/lib/sepa-validate";
 
 // nexrees: zod adapter for the shared password policy
 function passwordRule(v: string, ctx: z.RefinementCtx) {
@@ -212,11 +213,21 @@ export const paymentSchema = z.object({
   reference: optionalStr,
 });
 
+// nexrees: IBAN checksum, mandate reference charset/length (max. 35), signature not in the future
 export const mandateSchema = z.object({
   personId: z.string().min(1),
-  iban: z.string().trim().min(1),
-  mandateRef: z.string().trim().min(1),
-  signedDate: z.coerce.date(),
+  iban: z
+    .string()
+    .trim()
+    .transform(normalizeIban)
+    .refine(ibanValid, "IBAN ist ungültig (Prüfziffer)"),
+  mandateRef: z
+    .string()
+    .trim()
+    .min(1)
+    .max(35, "Mandatsreferenz: höchstens 35 Zeichen")
+    .regex(/^[A-Za-z0-9+?/\-:().,' ]+$/, "Mandatsreferenz: nur A–Z, 0–9 und + ? / - : ( ) . , '"),
+  signedDate: z.coerce.date().refine((d) => d.getTime() <= Date.now() + 86_400_000, "Unterschriftsdatum liegt in der Zukunft"),
 });
 
 // month als "YYYY-MM"

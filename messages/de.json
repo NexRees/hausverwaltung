@@ -1338,5 +1338,25 @@
     "kindHint_ISSUE_REPORTED": "Mieter meldet einen Schaden über das Portal",
     "kind_INBOUND_EMAIL": "Eingehende E-Mails",
     "kindHint_INBOUND_EMAIL": "Neue Mails im Posteingang (IMAP-Abruf)"
+  },
+  "nexrees": {
+    "bookkeeping": {
+      "tab": "Buchhaltung",
+      "lockTitle": "Festschreibung (GoBD)",
+      "lockHint": "Buchungen bis einschließlich dieses Tages werden gesperrt: Sollstellungen, Zahlungen, Kosten und Rücklagenbuchungen können dann weder angelegt noch geändert oder gelöscht werden, auch nicht über die API. Korrekturen erfolgen als neue Buchung im offenen Zeitraum. Das lässt sich nicht rückgängig machen.",
+      "lockedUntil": "Festgeschrieben bis",
+      "notLocked": "Noch nichts festgeschrieben.",
+      "lockUntil": "Festschreiben bis einschließlich",
+      "lockButton": "Festschreiben",
+      "lockConfirm": "Zeitraum endgültig festschreiben? Das kann nicht rückgängig gemacht werden.",
+      "locked": "Festgeschrieben",
+      "sepaTitle": "SEPA-Lastschrift",
+      "sepaHint": "Gläubiger-Identifikationsnummer (Deutsche Bundesbank) und das Konto, auf das eingezogen wird. Ohne gültige Angaben wird keine Lastschriftdatei erstellt.",
+      "creditorId": "Gläubiger-ID",
+      "creditorIban": "IBAN des Gläubigerkontos",
+      "creditorBic": "BIC (optional)",
+      "save": "Speichern",
+      "saved": "Gespeichert"
+    }
   }
 }
