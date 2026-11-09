@@ -22,8 +22,17 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_VERSION_LABEL, APP_VERSION_FULL } from "@/lib/version";
 import { BRAND } from "@/lib/brand";
+import { SidebarAccount } from "@/components/sidebar-account";
 
-export function AppSidebar({ logoUrl, superAdmin = false }: { logoUrl?: string; superAdmin?: boolean }) {
+export function AppSidebar({
+  logoUrl,
+  superAdmin = false,
+  user,
+}: {
+  logoUrl?: string;
+  superAdmin?: boolean;
+  user: { name?: string | null; email?: string | null; role: string };
+}) {
   const t = useTranslations();
   const pathname = usePathname();
   const { state, isMobile } = useSidebar();
@@ -111,8 +120,9 @@ export function AppSidebar({ logoUrl, superAdmin = false }: { logoUrl?: string; 
           );
         })}
       </SidebarContent>
-      <SidebarFooter>
-        <div className="px-2 py-1 text-xs text-muted-foreground" title={APP_VERSION_FULL}>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarAccount name={user.name} email={user.email} role={user.role} />
+        <div className="px-2 text-xs text-muted-foreground" title={APP_VERSION_FULL}>
           {APP_VERSION_LABEL}
         </div>
       </SidebarFooter>

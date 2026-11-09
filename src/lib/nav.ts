@@ -75,7 +75,9 @@ export const navGroups: NavGroup[] = [
       { key: "nav.templates", href: "/templates", icon: FileText },
       { key: "nav.audit", href: "/audit", icon: ScrollText },
       { key: "nav.tenants", href: "/tenants", icon: Building, superAdmin: true },
-      { key: "nav.settings", href: "/settings", icon: Settings },
     ],
   },
 ];
+
+// nexrees: settings sit at the bottom of the sidebar next to the account menu, not in a section.
+export const settingsNavItem: NavItem = { key: "nav.settings", href: "/settings", icon: Settings };

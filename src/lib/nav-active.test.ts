@@ -21,10 +21,12 @@ describe("activeNavGroup", () => {
   it("finds the section of the current page", () => {
     expect(activeNavGroup(navGroups, "/dunning/42")).toBe("nav.groupFinance");
     expect(activeNavGroup(navGroups, "/leasing")).toBe("nav.groupManagement");
-    expect(activeNavGroup(navGroups, "/settings/users")).toBe("nav.groupAdmin");
+    expect(activeNavGroup(navGroups, "/audit/42")).toBe("nav.groupAdmin");
   });
   it("is null outside every section", () => {
     expect(activeNavGroup(navGroups, "/profile")).toBeNull();
+    // Settings live in the sidebar footer, so no section opens for them.
+    expect(activeNavGroup(navGroups, "/settings/users")).toBeNull();
   });
   it("takes the first section when two would match", () => {
     const groups: NavGroup[] = [
