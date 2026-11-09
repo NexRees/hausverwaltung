@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -36,7 +36,9 @@ export function AppSidebar({
 }) {
   const t = useTranslations();
   const pathname = usePathname();
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  // nexrees: on phones the navigation sheet closes once a page has been chosen
+  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
   // nexrees: sections collapse; only the one holding the current page is open (and marked).
   // Others open on click; moving to another page closes them again.
   const current = activeNavGroup(navGroups, pathname);
@@ -63,7 +65,8 @@ export function AppSidebar({
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      {/* nexrees: the section list is the app's main navigation landmark */}
+      <SidebarContent role="navigation" aria-label={t("a11y.mainNavigation")}>
         {navGroups.map((group) => {
           const isCurrent = group.labelKey === current;
           // The current section always stays open, so the page you are on is always in view.
@@ -103,18 +106,22 @@ export function AppSidebar({
               </SidebarGroupLabel>
               <SidebarGroupContent id={contentId} hidden={!open}>
                 <SidebarMenu>
-                  {group.items.filter((item) => !item.superAdmin || superAdmin).map((item) => (
+                  {group.items.filter((item) => !item.superAdmin || superAdmin).map((item) => {
+                    const active = isNavItemActive(item.href, pathname);
+                    return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         render={<Link href={item.href} />}
-                        isActive={isNavItemActive(item.href, pathname)}
+                        isActive={active}
+                        aria-current={active ? "page" : undefined}
                         tooltip={t(item.key)}
                       >
                         <item.icon />
                         <span>{t(item.key)}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))}
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

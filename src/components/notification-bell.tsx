@@ -25,6 +25,7 @@ export type NotificationItem = {
 
 export function NotificationBell({ items, unread }: { items: NotificationItem[]; unread: number }) {
   const t = useTranslations("notifications");
+  const tA11y = useTranslations("a11y");
   const router = useRouter();
   const [, start] = useTransition();
 
@@ -52,11 +53,11 @@ export function NotificationBell({ items, unread }: { items: NotificationItem[];
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" size="icon" className="relative" aria-label={t("title")} title={t("title")} />}
+        render={<Button variant="ghost" size="icon" className="relative" aria-label={`${t("title")}, ${tA11y("unreadCount", { count: unread })}`} title={t("title")} />}
       >
         <Bell className="size-5" />
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-white">
+          <span aria-hidden className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         )}

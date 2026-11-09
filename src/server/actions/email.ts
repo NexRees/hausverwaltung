@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { deliverEmail, queueEmails } from "@/server/outbox";
-import { emailSchema, type ActionState } from "@/lib/schemas";
+import { emailSchema, type ActionState, invalid } from "@/lib/schemas";
 import { renderTemplate } from "@/lib/template";
 import { sanitizeMailHtml, isEmptyHtml } from "@/server/mail-sanitize";
 import { htmlToText, escapeHtml, textToHtml } from "@/lib/mail-html";
@@ -46,7 +46,7 @@ export async function createEmail(_p: ActionState, fd: FormData): Promise<Action
   const html = sanitizeMailHtml(String(fd.get("html") ?? ""));
   if (isEmptyHtml(html)) return { error: "Nachricht fehlt" };
   const r = emailSchema.safeParse({ ...Object.fromEntries(fd), body: htmlToText(html) });
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
 
   // Angehängte Dokumente (documentId je Checkbox) — auf Mandant prüfen.
   const docIds = fd.getAll("documentIds").map(String).filter(Boolean);

@@ -1,5 +1,7 @@
 "use server";
 
+import { invalid } from "@/lib/schemas";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +21,7 @@ export async function createApiToken(_p: TokenState, fd: FormData): Promise<Toke
   const user = await requireUser();
   if (!roleAllows(user.role, WRITE_ROLES)) return { error: "API-Token nur für Verwaltungsrollen." };
   const r = schema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
 
   // Zieluser: standardmäßig man selbst. Für andere → nur ADMIN.
   let targetId = user.id;

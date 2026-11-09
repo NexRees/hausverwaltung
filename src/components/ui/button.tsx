@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -40,6 +41,27 @@ const buttonVariants = cva(
   }
 )
 
+// nexrees: <Button render={<Link href=… />}> / render={<a href=… />} stays a link. Through Base UI's
+// Button a non-native element always got role="button", which hid the URL from assistive tech and
+// browser agents (pager, calendar, CSV export, "Öffnen" links all read as buttons).
+function isLinkElement(render: unknown): render is React.ReactElement<{ href?: unknown }> {
+  return React.isValidElement(render) && (render.props as { href?: unknown }).href !== undefined
+}
+
+function linkButton(render: React.ReactElement<Record<string, unknown>>, className: string, props: Record<string, unknown>) {
+  // Base UI button-only options have no meaning on a link and must not reach the DOM.
+  const { focusableWhenDisabled: _f, disabled, children, ...rest } = props
+  void _f
+  const own = render.props
+  return React.cloneElement(render, {
+    ...rest,
+    "data-slot": "button",
+    className: cn(className, own.className as string | undefined),
+    ...(disabled ? { "aria-disabled": true } : {}),
+    ...(children !== undefined ? { children: children as React.ReactNode } : {}),
+  })
+}
+
 function Button({
   className,
   variant = "default",
@@ -48,6 +70,13 @@ function Button({
   nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  if (isLinkElement(render)) {
+    return linkButton(
+      render as React.ReactElement<Record<string, unknown>>,
+      cn(buttonVariants({ variant, size, className: className as string | undefined })),
+      props as Record<string, unknown>
+    )
+  }
   return (
     <ButtonPrimitive
       data-slot="button"

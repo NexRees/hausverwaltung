@@ -96,7 +96,7 @@ export default async function WegPage({
       <form className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("weg.property")}</label>
-          <select name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterProperty")} name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {wegProps.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -104,7 +104,7 @@ export default async function WegPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("statements.year")}</label>
-          <select name="year" defaultValue={year} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterYear")} name="year" defaultValue={year} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {years.map((y) => (<option key={y} value={y}>{y}</option>))}
           </select>
         </div>

@@ -12,6 +12,7 @@ import {
   ticketTimeSchema,
   maintenanceSchema,
   type ActionState,
+  invalid,
 } from "@/lib/schemas";
 
 function fail(msg?: string): ActionState {
@@ -30,7 +31,7 @@ function nn(v: string | undefined) {
 export async function createContractor(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = contractorSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   await prisma.contractor.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
 }
@@ -58,7 +59,7 @@ async function notifyTicketAssignee(
 export async function createTicket(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = ticketCreateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const created = await prisma.ticket.create({
     data: {
       tenantId: user.tenantId,
@@ -82,7 +83,7 @@ export async function updateTicket(_p: ActionState, fd: FormData): Promise<Actio
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = ticketUpdateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const before = await prisma.ticket.findFirst({
     where: { id, tenantId: user.tenantId },
     select: { status: true, reporterId: true, assigneeId: true },
@@ -137,7 +138,7 @@ export async function deleteTicket(fd: FormData): Promise<void> {
 export async function createMaintenance(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = maintenanceSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const prop = await prisma.property.findFirst({ where: { id: r.data.propertyId, tenantId: user.tenantId }, select: { id: true } });
   if (!prop) return fail("Objekt nicht gefunden");
   await prisma.maintenanceContract.create({

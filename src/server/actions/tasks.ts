@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
-import { taskSchema, type ActionState } from "@/lib/schemas";
+import { taskSchema, type ActionState, invalid } from "@/lib/schemas";
 
 export async function createTask(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = taskSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   await prisma.task.create({ data: { ...r.data, tenantId: user.tenantId } });
   revalidatePath("/", "layout");
   return { ok: true };

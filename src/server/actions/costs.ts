@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
-import { costEntrySchema, type ActionState } from "@/lib/schemas";
+import { costEntrySchema, type ActionState, invalid } from "@/lib/schemas";
 import { subcommunityValid } from "@/server/weg";
 
 export async function createCost(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = costEntrySchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const prop = await prisma.property.findFirst({
     where: { id: r.data.propertyId, tenantId: user.tenantId },
     select: { id: true },

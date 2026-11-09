@@ -15,6 +15,7 @@ import { SearchBox } from "@/components/search-box";
 import { BRAND } from "@/lib/brand";
 import { envLabel } from "@/components/env-badge";
 import { PageTitle } from "@/components/page-title";
+import { SkipLink } from "@/components/skip-link";
 
 export default async function AdminLayout({
   children,
@@ -48,8 +49,11 @@ export default async function AdminLayout({
       {/* Mandanten-Branding: überschreibt die Primärfarbe inkl. lesbarem
           Vordergrund (sonst wirken Buttons je nach Farbe "ausgegraut"). */}
       {tenant?.brandColor && (
-        <style>{`:root{--primary:${tenant.brandColor};--sidebar-primary:${tenant.brandColor};--ring:${tenant.brandColor};--primary-foreground:${readableForeground(tenant.brandColor)};--sidebar-primary-foreground:${readableForeground(tenant.brandColor)};}`}</style>
+        // nexrees: --ring stays the neutral token so the focus indicator keeps 3:1 contrast
+        <style>{`:root{--primary:${tenant.brandColor};--sidebar-primary:${tenant.brandColor};--primary-foreground:${readableForeground(tenant.brandColor)};--sidebar-primary-foreground:${readableForeground(tenant.brandColor)};}`}</style>
       )}
+      {/* nexrees: first tab stop jumps over the navigation to the page content */}
+      <SkipLink />
       <AppSidebar
         logoUrl={logoUrl}
         superAdmin={user.superAdmin}
@@ -60,7 +64,7 @@ export default async function AdminLayout({
         {/* nexrees: the top bar stays in place while the page scrolls */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6 self-center" />
           <PageTitle />
           {user.superAdmin && user.tenantId !== user.homeTenantId && (
             <a
@@ -78,7 +82,10 @@ export default async function AdminLayout({
             <NotificationBell items={notifItems} unread={unread} />
           </div>
         </header>
-        <main data-page-content className="flex-1 p-4 md:p-6">{children}</main>
+        {/* nexrees: the one <main> landmark (SidebarInset is a div); target of the skip link */}
+        <main id="main" tabIndex={-1} data-page-content className="flex-1 p-4 outline-none md:p-6">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -61,14 +61,14 @@ export default async function AuditPage({
       <form className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("audit.action")}</label>
-          <select name="action" defaultValue={action} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("audit.action")} name="action" defaultValue={action} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             <option value="">{t("common.all")}</option>
             {ACTIONS.map((a) => (<option key={a} value={a}>{t(`auditAction.${a}`)}</option>))}
           </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("audit.entity")}</label>
-          <select name="entity" defaultValue={entity} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("audit.entity")} name="entity" defaultValue={entity} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             <option value="">{t("common.all")}</option>
             {entities.map((e) => (<option key={e.entity} value={e.entity}>{e.entity}</option>))}
           </select>

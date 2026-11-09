@@ -15,6 +15,7 @@ import {
   meterSchema,
   readingSchema,
   type ActionState,
+  invalid,
 } from "@/lib/schemas";
 
 function fail(msg?: string): ActionState {
@@ -30,7 +31,7 @@ export async function createProperty(_p: ActionState, fd: FormData): Promise<Act
   const user = await requireWriter();
   const entries = Object.fromEntries(fd);
   const r = propertySchema.safeParse(entries);
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const created = await prisma.property.create({
     data: { ...r.data, custom: pickCustom(entries), tenantId: user.tenantId },
   });
@@ -43,7 +44,7 @@ export async function updateProperty(_p: ActionState, fd: FormData): Promise<Act
   const id = String(fd.get("id") ?? "");
   const entries = Object.fromEntries(fd);
   const r = propertySchema.safeParse(entries);
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   await prisma.property.updateMany({
     where: { id, tenantId: user.tenantId },
     data: { ...r.data, custom: pickCustom(entries) },
@@ -64,7 +65,7 @@ export async function deleteProperty(fd: FormData): Promise<void> {
 export async function createBuilding(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = buildingSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   // Property muss zum Mandanten gehören.
   const prop = await prisma.property.findFirst({
     where: { id: r.data.propertyId, tenantId: user.tenantId },
@@ -79,7 +80,7 @@ export async function updateBuilding(_p: ActionState, fd: FormData): Promise<Act
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = buildingUpdateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   await prisma.building.updateMany({
     where: { id, tenantId: user.tenantId },
     data: { name: r.data.name },
@@ -104,7 +105,7 @@ export async function createUnit(_p: ActionState, fd: FormData): Promise<ActionS
   const user = await requireWriter();
   const entries = Object.fromEntries(fd);
   const r = unitSchema.safeParse(entries);
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   let buildingId = r.data.buildingId;
   if (buildingId.startsWith(PROPERTY_PREFIX)) {
     const prop = await prisma.property.findFirst({
@@ -132,7 +133,7 @@ export async function updateUnit(_p: ActionState, fd: FormData): Promise<ActionS
   const id = String(fd.get("id") ?? "");
   const entries = Object.fromEntries(fd);
   const r = unitUpdateSchema.safeParse(entries);
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   await prisma.unit.updateMany({ where: { id, tenantId: user.tenantId }, data: { ...r.data, custom: pickCustom(entries) } });
   return done();
 }
@@ -149,7 +150,7 @@ export async function deleteUnit(fd: FormData): Promise<void> {
 export async function createMeter(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = meterSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const u = await prisma.unit.findFirst({
     where: { id: r.data.unitId, tenantId: user.tenantId },
     select: { id: true },
@@ -171,7 +172,7 @@ export async function deleteMeter(fd: FormData): Promise<void> {
 export async function createReading(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = readingSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const m = await prisma.meter.findFirst({
     where: { id: r.data.meterId, tenantId: user.tenantId },
     select: { id: true },

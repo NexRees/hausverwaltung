@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
-import { appointmentSchema, type ActionState } from "@/lib/schemas";
+import { appointmentSchema, type ActionState, invalid } from "@/lib/schemas";
 
 /** Prüft Objekt, Teilnehmer und Unterlagen auf Mandantenzugehörigkeit (#74). */
 async function resolveLinks(tenantId: string, fd: FormData, propertyId?: string) {
@@ -23,7 +23,7 @@ async function resolveLinks(tenantId: string, fd: FormData, propertyId?: string)
 export async function createAppointment(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = appointmentSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const links = await resolveLinks(user.tenantId, fd, r.data.propertyId);
   if ("error" in links) return { error: links.error };
 
@@ -42,7 +42,7 @@ export async function updateAppointment(_p: ActionState, fd: FormData): Promise<
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = appointmentSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const appt = await prisma.appointment.findFirst({ where: { id, tenantId: user.tenantId }, select: { id: true } });
   if (!appt) return { error: "Termin nicht gefunden" };
   const links = await resolveLinks(user.tenantId, fd, r.data.propertyId);

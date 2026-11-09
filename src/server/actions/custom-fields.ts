@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
-import { customFieldDefSchema, type ActionState } from "@/lib/schemas";
+import { customFieldDefSchema, type ActionState, invalid } from "@/lib/schemas";
 
 export async function createCustomFieldDef(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = customFieldDefSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const exists = await prisma.customFieldDef.findFirst({
     where: { tenantId: user.tenantId, entity: r.data.entity, key: r.data.key },
     select: { id: true },

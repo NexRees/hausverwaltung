@@ -189,6 +189,7 @@ export default async function FinancesPage({
             <input type="hidden" name="tab" value="charges" />
             <select
               name="status"
+              aria-label={t("a11y.filterStatus")}
               defaultValue={statusFilter}
               className="flex h-8 rounded-lg border border-input bg-transparent px-2 text-sm dark:bg-input/30"
             >
@@ -199,6 +200,7 @@ export default async function FinancesPage({
             </select>
             <select
               name="type"
+              aria-label={t("a11y.filterType")}
               defaultValue={typeFilter}
               className="flex h-8 rounded-lg border border-input bg-transparent px-2 text-sm dark:bg-input/30"
             >
@@ -209,6 +211,7 @@ export default async function FinancesPage({
             </select>
             <select
               name="lease"
+              aria-label={t("a11y.filterLease")}
               defaultValue={leaseFilter}
               className="flex h-8 max-w-48 rounded-lg border border-input bg-transparent px-2 text-sm dark:bg-input/30"
             >
@@ -219,6 +222,7 @@ export default async function FinancesPage({
             </select>
             <select
               name="year"
+              aria-label={t("a11y.filterYear")}
               defaultValue={yearFilter}
               className="flex h-8 rounded-lg border border-input bg-transparent px-2 text-sm dark:bg-input/30"
             >
@@ -336,15 +340,16 @@ export default async function FinancesPage({
               name="q"
               defaultValue={txnFilter.q}
               placeholder={t("finances.txnSearch")}
+              aria-label={t("finances.txnSearch")}
               className={cn(filterCls, "w-56")}
             />
-            <select name="acc" defaultValue={txnFilter.acc ?? ""} className={cn(filterCls, "max-w-44")}>
+            <select aria-label={t("finances.account")} name="acc" defaultValue={txnFilter.acc ?? ""} className={cn(filterCls, "max-w-44")}>
               <option value="">{t("finances.allAccounts")}</option>
               {accountOpts.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-            <select name="dir" defaultValue={txnFilter.dir ?? ""} className={filterCls}>
+            <select aria-label={t("a11y.filterDirection")} name="dir" defaultValue={txnFilter.dir ?? ""} className={filterCls}>
               <option value="">{t("finances.allDirections")}</option>
               <option value="EINGANG">{t("finances.transIn")}</option>
               <option value="AUSGANG">{t("finances.transOut")}</option>

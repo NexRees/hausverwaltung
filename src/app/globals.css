@@ -60,13 +60,16 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* nexrees: 0.556 gave 4.34:1 on --muted; 0.53 reaches 4.8:1 on muted, 5.3:1 on white */
+  --muted-foreground: oklch(0.53 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  /* nexrees: darker so destructive text on its 10% tint (badges) reaches 4.5:1 */
+  --destructive: oklch(0.55 0.23 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* nexrees: focus indicator 3:1 or better (0.708 was 2.6:1 on white) */
+  --ring: oklch(0.5 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -80,7 +83,7 @@
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.5 0 0);
 }
 
 .dark {
@@ -109,8 +112,9 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  /* nexrees: used as text on the dark sidebar (current section); 0.488 was 2.6:1 */
+  --sidebar-primary: oklch(0.72 0.16 264.376);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -138,6 +142,23 @@
      lock scrolling) don't shift the layout sideways. */
   html {
     scrollbar-gutter: stable;
+    /* nexrees: anchors and keyboard focus scroll clear of the sticky top bar (WCAG 2.4.11) */
+    scroll-padding-top: 4.5rem;
+  }
+  /* nexrees: honour "reduce motion" for dialogs, menus, the sidebar and toasts */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    .animate-spin {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
+    }
   }
   /* nexrees: the page title is shown in the top bar (PageTitle), so the page's own heading is
      hidden. A static subtitle right under a page's leading heading goes too; detail pages keep

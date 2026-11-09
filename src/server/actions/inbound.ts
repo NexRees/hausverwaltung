@@ -8,7 +8,7 @@ import { syncTenantInbox } from "@/lib/inbound-sync";
 import { threadWhere } from "@/lib/threads";
 import type { Prisma } from "@prisma/client";
 import { deleteFile, readFile } from "@/lib/storage";
-import { documentEditSchema } from "@/lib/schemas";
+import { documentEditSchema, invalid } from "@/lib/schemas";
 import { isEInvoice, parseEInvoice } from "@/lib/adapters/erechnung";
 import type { ActionState } from "@/lib/schemas";
 
@@ -57,7 +57,7 @@ export async function importInboundAttachment(_p: ActionState, fd: FormData): Pr
   const user = await requireWriter();
   const id = String(fd.get("attachmentId") ?? "");
   const r = documentEditSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const { name, category, propertyId, unitId, personId } = r.data;
 
   const att = await prisma.inboundEmailAttachment.findFirst({ where: { id, inboundEmail: { tenantId: user.tenantId } } });

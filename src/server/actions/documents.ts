@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { saveFile, deleteFile } from "@/lib/storage";
 import { isEInvoice, parseEInvoice } from "@/lib/adapters/erechnung";
-import { documentEditSchema, type ActionState } from "@/lib/schemas";
+import { documentEditSchema, type ActionState, invalid } from "@/lib/schemas";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limit";
 
 export async function uploadDocument(_p: ActionState, fd: FormData): Promise<ActionState> {
@@ -64,7 +64,7 @@ export async function updateDocument(_p: ActionState, fd: FormData): Promise<Act
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = documentEditSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const { name, category, propertyId, unitId, personId } = r.data;
 
   const doc = await prisma.document.findFirst({ where: { id, tenantId: user.tenantId }, select: { id: true } });

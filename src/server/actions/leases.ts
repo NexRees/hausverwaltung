@@ -12,6 +12,7 @@ import {
   depositSchema,
   renterSchema,
   type ActionState,
+  invalid,
 } from "@/lib/schemas";
 
 function fail(msg?: string): ActionState {
@@ -27,7 +28,7 @@ export async function createLease(_p: ActionState, fd: FormData): Promise<Action
   const user = await requireWriter();
   const entries = Object.fromEntries(fd);
   const r = leaseCreateSchema.safeParse(entries);
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
 
   // Mehrere Mieter möglich (personIds als Mehrfachfeld); Duplikate entfernen.
   const personIds = [...new Set(fd.getAll("personIds").map(String).filter(Boolean))];
@@ -59,7 +60,7 @@ export async function updateLease(_p: ActionState, fd: FormData): Promise<Action
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = leaseUpdateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   // Einheit muss zum Mandanten gehören (Vertrag kann auf andere Einheit umgezogen werden).
   const unit = await prisma.unit.findFirst({
     where: { id: r.data.unitId, tenantId: user.tenantId },
@@ -87,7 +88,7 @@ async function assertLease(tenantId: string, leaseId: string) {
 export async function addRenter(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = renterSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   if (!(await assertLease(user.tenantId, r.data.leaseId))) return fail("Vertrag nicht gefunden");
   await prisma.renter.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
@@ -103,7 +104,7 @@ export async function deleteRenter(fd: FormData): Promise<void> {
 export async function createComponent(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = rentComponentSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   if (!(await assertLease(user.tenantId, r.data.leaseId))) return fail("Vertrag nicht gefunden");
   await prisma.rentComponent.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
@@ -119,7 +120,7 @@ export async function deleteComponent(fd: FormData): Promise<void> {
 export async function createAdjustment(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = rentAdjustmentSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   if (!(await assertLease(user.tenantId, r.data.leaseId))) return fail("Vertrag nicht gefunden");
   await prisma.rentAdjustment.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
@@ -152,7 +153,7 @@ export async function deleteAdjustment(fd: FormData): Promise<void> {
 export async function upsertDeposit(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = depositSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   if (!(await assertLease(user.tenantId, r.data.leaseId))) return fail("Vertrag nicht gefunden");
   const { leaseId, accountId, ...rest } = r.data;
   const data = { ...rest, accountId: accountId || null };
