@@ -41,6 +41,20 @@ export async function deleteContractor(fd: FormData): Promise<void> {
 }
 
 // --- Ticket ---
+
+// nexrees: tell a colleague when a ticket is handed to them (shows in "Meine Arbeit").
+async function notifyTicketAssignee(
+  user: { id: string; tenantId: string; name?: string | null; email?: string | null },
+  assigneeId: string | null,
+  previous: string | null,
+  title: string,
+) {
+  if (!assigneeId || assigneeId === previous || assigneeId === user.id) return;
+  await notifyUsers(user.tenantId, [assigneeId], {
+    title: `Ticket für dich von ${user.name ?? user.email ?? "Kollegin/Kollege"}: ${title}`,
+    link: "/my-work",
+  });
+}
 export async function createTicket(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = ticketCreateSchema.safeParse(Object.fromEntries(fd));
@@ -61,6 +75,7 @@ export async function createTicket(_p: ActionState, fd: FormData): Promise<Actio
     },
   });
   await audit(user, "CREATE", "Ticket", created.id, r.data.title);
+  await notifyTicketAssignee(user, created.assigneeId, null, r.data.title); // nexrees
   return done();
 }
 export async function updateTicket(_p: ActionState, fd: FormData): Promise<ActionState> {
@@ -70,7 +85,7 @@ export async function updateTicket(_p: ActionState, fd: FormData): Promise<Actio
   if (!r.success) return fail(r.error.issues[0]?.message);
   const before = await prisma.ticket.findFirst({
     where: { id, tenantId: user.tenantId },
-    select: { status: true, reporterId: true },
+    select: { status: true, reporterId: true, assigneeId: true },
   });
   await prisma.ticket.updateMany({
     where: { id, tenantId: user.tenantId },
@@ -97,6 +112,7 @@ export async function updateTicket(_p: ActionState, fd: FormData): Promise<Actio
     });
   }
   await audit(user, "UPDATE", "Ticket", id, r.data.title);
+  if (before) await notifyTicketAssignee(user, nn(r.data.assigneeId), before.assigneeId, r.data.title); // nexrees
   return done();
 }
 

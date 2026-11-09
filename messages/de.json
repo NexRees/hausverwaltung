@@ -51,6 +51,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "myWork": "Meine Arbeit",
     "properties": "Objekte",
     "units": "Einheiten",
     "persons": "Personen",
@@ -1338,5 +1339,41 @@
     "kindHint_ISSUE_REPORTED": "Mieter meldet einen Schaden über das Portal",
     "kind_INBOUND_EMAIL": "Eingehende E-Mails",
     "kindHint_INBOUND_EMAIL": "Neue Mails im Posteingang (IMAP-Abruf)"
+  },
+  "myWork": {
+    "title": "Meine Arbeit",
+    "subtitle": "Was gerade bei dir liegt: Aufgaben, Tickets, Erwähnungen und was du an andere übergeben hast.",
+    "myTasks": "Meine Aufgaben",
+    "noTasks": "Keine offenen Aufgaben für dich.",
+    "myTickets": "Meine Tickets",
+    "noTickets": "Keine offenen Tickets für dich.",
+    "mentions": "Erwähnungen (30 Tage)",
+    "noMentions": "Niemand hat dich erwähnt.",
+    "delegated": "Von mir übergeben",
+    "noDelegated": "Du wartest auf niemanden.",
+    "unassigned": "Offen, ohne Zuständige",
+    "noUnassigned": "Alle offenen Aufgaben haben jemanden."
+  },
+  "collab": {
+    "title": "Aufgaben & Kommentare",
+    "newTask": "Aufgabe",
+    "editTask": "Aufgabe bearbeiten",
+    "taskTitle": "Aufgabe",
+    "assignee": "Zuständig",
+    "unassigned": "Nicht zugewiesen",
+    "dueDate": "Fällig am",
+    "description": "Beschreibung",
+    "markDone": "Erledigt",
+    "reopen": "Wieder öffnen",
+    "take": "Übernehmen",
+    "assignedTo": "bei {name}",
+    "from": "von {name}",
+    "comment": "Kommentar",
+    "commentPlaceholder": "Kommentar schreiben … mit @ eine Kollegin oder einen Kollegen erwähnen",
+    "mentionHint": "@Name benachrichtigt die Person. Strg+Enter sendet.",
+    "send": "Senden",
+    "empty": "Noch keine Aufgaben, Kommentare oder Änderungen.",
+    "taskCreated": "Aufgabe „{title}“ von {by} an {to}",
+    "taskDone": "Aufgabe „{title}“ erledigt ({name})"
   }
 }
