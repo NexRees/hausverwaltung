@@ -139,6 +139,17 @@
   html {
     scrollbar-gutter: stable;
   }
+  /* nexrees: the page title is shown in the top bar (PageTitle), so the page's own heading is
+     hidden. A static subtitle right under a page's leading heading goes too; detail pages keep
+     theirs (it follows a back link there and carries data like an address or a date range). */
+  [data-page-content] h1.text-2xl,
+  [data-page-content] h1.text-2xl:first-child + p.text-muted-foreground {
+    display: none;
+  }
+  /* A wrapper that only held heading + subtitle would leave an empty gap in a stacked page. */
+  [data-page-content] [class*="space-y-"] > div:has(> h1.text-2xl:first-child + p.text-muted-foreground:last-child) {
+    display: none;
+  }
   /* Native Formular-Elemente (Select-Listen, Datumspicker, Scrollbars) im
      Dark Mode dunkel rendern — sonst zeigt der Browser weiße Options-Listen
      mit heller Schrift (weiß auf weiß). */
