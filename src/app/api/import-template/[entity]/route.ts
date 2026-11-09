@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
+import { forbidden, isStaffRole } from "@/lib/staff-access";
 import { actingTenantId } from "@/lib/acting-tenant";
 import { prisma } from "@/lib/prisma";
 import { csvResponse, toCsv } from "@/lib/csv";
@@ -16,6 +17,7 @@ const HEADERS: Record<string, string[]> = {
 export async function GET(_req: Request, { params }: { params: Promise<{ entity: string }> }) {
   const session = await auth();
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
+  if (!isStaffRole(session.user.role)) return forbidden(); // nexrees: staff only
   const { entity } = await params;
   const headers = HEADERS[entity];
   if (!headers) return new Response("Not found", { status: 404 });

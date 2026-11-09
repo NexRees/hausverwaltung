@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { forbidden, isStaffRole } from "@/lib/staff-access";
 import { actingTenantId } from "@/lib/acting-tenant";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvResponse } from "@/lib/csv";
@@ -6,6 +7,7 @@ import { toCsv, csvResponse } from "@/lib/csv";
 export async function GET() {
   const session = await auth();
   if (!session?.user) return new Response("Unauthorized", { status: 401 });
+  if (!isStaffRole(session.user.role)) return forbidden(); // nexrees: staff only
 
   const renters = await prisma.renter.findMany({
     where: { tenantId: (await actingTenantId(session.user)) },
