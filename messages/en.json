@@ -1236,7 +1236,8 @@
     "placeholder": "Properties, units, people…",
     "prompt": "Enter a search term to search properties, units, people and leases.",
     "resultsFor": "{count, plural, one {# result} other {# results}} for “{q}”",
-    "noResults": "No results."
+    "noResults": "No results.",
+    "showing": "Showing {shown} of {total} — refine the search to see more."
   },
   "setupColors": {
     "indigo": "Indigo",

@@ -54,6 +54,7 @@ export type LedgerFilter = { status?: string; type?: string; leaseId?: string; y
 export async function chargeLedgerPage(tenantId: string, f: LedgerFilter, skip: number, take: number, now = new Date()) {
   const conds: Prisma.Sql[] = [Prisma.sql`TRUE`];
   if (f.status && (CHARGE_STATUSES as string[]).includes(f.status)) conds.push(Prisma.sql`l.status = ${f.status}`);
+  else if (f.status === "UNPAID") conds.push(Prisma.sql`l.status <> 'PAID'`); // API: every charge with money open
   if (f.type) conds.push(Prisma.sql`l.type = ${f.type}`);
   if (f.leaseId) conds.push(Prisma.sql`l."leaseId" = ${f.leaseId}`);
   if (f.year) conds.push(Prisma.sql`EXTRACT(YEAR FROM l.period AT TIME ZONE 'UTC') = ${f.year}`);

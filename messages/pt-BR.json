@@ -1236,7 +1236,8 @@
     "placeholder": "Imóveis, unidades, pessoas…",
     "prompt": "Informe um termo para pesquisar imóveis, unidades, pessoas e contratos.",
     "resultsFor": "{count, plural, one {# resultado} other {# resultados}} para “{q}”",
-    "noResults": "Nenhum resultado."
+    "noResults": "Nenhum resultado.",
+    "showing": "Mostrando {shown} de {total} — refine a pesquisa para ver mais."
   },
   "setupColors": {
     "indigo": "Índigo",

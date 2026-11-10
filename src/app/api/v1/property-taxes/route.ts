@@ -1,8 +1,10 @@
-import { authenticateBearer, unauthorized } from "@/lib/api-auth";
+import { authenticateBearer } from "@/lib/api-auth";
 import { listPropertyTaxes } from "@/lib/api-data";
+import { listResponse, safeHandler, unauthorizedJson } from "@/lib/api-http";
 
-export async function GET(req: Request) {
+// nexrees: paged (?limit, ?offset), X-Total-Count + Link headers, JSON errors
+export const GET = safeHandler(async (req: Request) => {
   const p = await authenticateBearer(req);
-  if (!p) return unauthorized();
-  return Response.json(await listPropertyTaxes(p.tenantId));
-}
+  if (!p) return unauthorizedJson();
+  return listResponse(req, (pg) => listPropertyTaxes(p.tenantId, pg));
+});

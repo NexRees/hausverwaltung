@@ -1,8 +1,10 @@
-import { authenticateBearer, unauthorized } from "@/lib/api-auth";
+import { authenticateBearer } from "@/lib/api-auth";
 import { listContractors } from "@/lib/api-data";
+import { listResponse, safeHandler, unauthorizedJson } from "@/lib/api-http";
 
-export async function GET(req: Request) {
+// nexrees: paged (?limit, ?offset, ?q), X-Total-Count + Link headers, JSON errors
+export const GET = safeHandler(async (req: Request) => {
   const p = await authenticateBearer(req);
-  if (!p) return unauthorized();
-  return Response.json(await listContractors(p.tenantId));
-}
+  if (!p) return unauthorizedJson();
+  return listResponse(req, (pg) => listContractors(p.tenantId, pg), { q: true });
+});
