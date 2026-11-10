@@ -24,6 +24,8 @@ export function safeCallbackPath(raw: unknown): string | null {
   }
   if (url.origin !== ORIGIN) return null;
   const path = url.pathname + url.search + url.hash;
+  // Dot segments can collapse "/..//host" or "/de/%2e%2e//host" into "//host": check the result again.
+  if (!path.startsWith("/") || path.startsWith("//")) return null;
   // Never back to the sign-in or setup page itself (would loop) or to the API.
   if (/^\/(?:[A-Za-z]{2}(?:-[A-Za-z]{2})?\/)?(?:login|setup|api)(?:[/?#]|$)/.test(path)) return null;
   return path;

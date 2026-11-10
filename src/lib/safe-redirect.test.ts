@@ -29,6 +29,14 @@ describe("safeCallbackPath", () => {
       "   ",
       "/\t/evil.example",
       "/\n/evil.example",
+      // Dot segments that normalise into a protocol-relative URL.
+      "/..//evil.example",
+      "/.//evil.example",
+      "/%2e//evil.example",
+      "/%2e%2e//evil.example",
+      "/.%2e//evil.example",
+      "/de/..//evil.example",
+      "/de/%2e%2e//evil.example/x",
     ]) {
       expect(safeCallbackPath(bad), bad).toBeNull();
     }
@@ -63,6 +71,7 @@ describe("loginUrlFor", () => {
   it("falls back to /login without a safe path", () => {
     expect(loginUrlFor(null, LOCALES)).toBe("/login");
     expect(loginUrlFor("//evil.example", LOCALES)).toBe("/login");
+    expect(loginUrlFor("/de/..//evil.example", LOCALES)).toBe("/login");
     expect(loginUrlFor("/de/login", LOCALES)).toBe("/login");
   });
 
