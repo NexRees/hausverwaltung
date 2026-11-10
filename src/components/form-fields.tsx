@@ -1,7 +1,19 @@
+"use client";
+
+import type * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { SharedCheckboxes, SharedOptionElements } from "@/components/shared-options";
+import { FieldErrorText, useFieldError } from "@/components/field-errors";
+
+// nexrees: every field shows its server-side validation message (via CrudDialog) and is marked
+// aria-invalid / aria-describedby; TextField passes through input constraints (min, max,
+// inputMode, autoComplete, placeholder, pattern) so people, browsers and agents see the rules.
+type InputExtras = Pick<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "min" | "max" | "minLength" | "maxLength" | "inputMode" | "autoComplete" | "placeholder" | "pattern"
+>;
 
 export function TextField({
   name,
@@ -10,6 +22,8 @@ export function TextField({
   type = "text",
   required = true,
   step,
+  hint,
+  ...extras
 }: {
   name: string;
   label: string;
@@ -17,7 +31,11 @@ export function TextField({
   type?: string;
   required?: boolean;
   step?: string;
-}) {
+  /** nexrees: short help text under the field (format, unit), linked via aria-describedby */
+  hint?: string;
+} & InputExtras) {
+  const hintId = hint ? `${name}-hint` : undefined;
+  const { message, inputProps } = useFieldError(name, hintId);
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
@@ -28,7 +46,15 @@ export function TextField({
         step={step}
         defaultValue={defaultValue}
         required={required}
+        {...extras}
+        {...inputProps}
       />
+      {hint && (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      )}
+      <FieldErrorText name={name} message={message} />
     </div>
   );
 }
@@ -68,6 +94,7 @@ export function TextAreaField({
   required?: boolean;
   rows?: number;
 }) {
+  const { message, inputProps } = useFieldError(name);
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
@@ -77,12 +104,14 @@ export function TextAreaField({
         rows={rows}
         defaultValue={defaultValue}
         required={required}
+        {...inputProps}
         className={cn(
-          "flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs",
+          "flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base shadow-xs md:text-sm",
           "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none",
-          "dark:bg-input/30",
+          "aria-invalid:border-destructive dark:bg-input/30",
         )}
       />
+      <FieldErrorText name={name} message={message} />
     </div>
   );
 }
@@ -99,9 +128,11 @@ export function MultiSelectField({
   options: { value: string; label: string }[] | string;
   defaultValues?: string[];
 }) {
+  const { message } = useFieldError(name);
+  // nexrees: a named group (fieldset + legend), so each checkbox is announced with its question
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
+    <fieldset className="min-w-0 space-y-2" aria-describedby={message ? `${name}-error` : undefined}>
+      <legend className="text-sm leading-none font-medium select-none">{label}</legend>
       <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-input p-2 dark:bg-input/30">
         {typeof options === "string" ? (
           <SharedCheckboxes list={options} name={name} defaultValues={defaultValues} />
@@ -109,7 +140,8 @@ export function MultiSelectField({
           <SharedCheckboxes options={options} name={name} defaultValues={defaultValues} />
         )}
       </div>
-    </div>
+      <FieldErrorText name={name} message={message} />
+    </fieldset>
   );
 }
 
@@ -128,6 +160,7 @@ export function SelectField({
   leading?: { value: string; label: string }[];
   defaultValue?: string;
 }) {
+  const { message, inputProps } = useFieldError(name);
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
@@ -135,10 +168,11 @@ export function SelectField({
         id={name}
         name={name}
         defaultValue={defaultValue}
+        {...inputProps}
         className={cn(
-          "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs",
+          "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-xs md:text-sm",
           "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none",
-          "dark:bg-input/30",
+          "aria-invalid:border-destructive dark:bg-input/30",
         )}
       >
         {leading.map((o) => (
@@ -156,6 +190,7 @@ export function SelectField({
           ))
         )}
       </select>
+      <FieldErrorText name={name} message={message} />
     </div>
   );
 }

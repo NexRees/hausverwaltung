@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -22,6 +22,7 @@ export function RichTextEditor({
   id?: string;
 }) {
   const t = useTranslations("editor");
+  const tA11y = useTranslations("a11y");
   const [html, setHtml] = useState(initialHtml);
   const [linkOpen, setLinkOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -40,13 +41,29 @@ export function RichTextEditor({
     ],
     content: initialHtml,
     editorProps: {
+      // nexrees: the editable area is a named, multi-line textbox (it was an unnamed div)
       attributes: {
         ...(id ? { id } : {}),
+        role: "textbox",
+        "aria-multiline": "true",
+        "aria-label": tA11y("editorLabel"),
         class: "mail-html min-h-36 max-h-80 overflow-y-auto px-3 py-2 text-sm outline-none",
       },
     },
     onUpdate: ({ editor }) => setHtml(editor.getHTML()),
   });
+
+  // The form's visible <label for={id}> cannot name a contenteditable div; point at it instead.
+  useEffect(() => {
+    if (!editor || !id) return;
+    const label = document.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(id)}"]`);
+    if (!label) return;
+    if (!label.id) label.id = `${id}-label`;
+    editor.view.dom.setAttribute("aria-labelledby", label.id);
+    const focusEditor = () => editor.commands.focus();
+    label.addEventListener("click", focusEditor);
+    return () => label.removeEventListener("click", focusEditor);
+  }, [editor, id]);
 
   const active = useEditorState({
     editor,
@@ -114,8 +131,17 @@ export function RichTextEditor({
                 e.preventDefault();
                 applyLink();
               }
-              if (e.key === "Escape") setLinkOpen(false);
+              if (e.key === "Escape") {
+                // nexrees: Escape closes only the link field, not the surrounding dialog with the draft
+                e.preventDefault();
+                e.stopPropagation();
+                e.nativeEvent.stopImmediatePropagation();
+                setLinkOpen(false);
+                editor?.commands.focus();
+              }
             }}
+            aria-label={t("link")}
+            inputMode="url"
             placeholder="https://…"
             className="h-8"
           />

@@ -6,14 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, assignableRoles, canDeleteUser } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { passwordProblem } from "@/lib/password-policy";
-import { userCreateSchema, userEditSchema, type ActionState } from "@/lib/schemas";
+import { userCreateSchema, userEditSchema, type ActionState, invalid } from "@/lib/schemas";
 
 const MANAGE_ROLES = ["VERWALTER"] as const; // ADMIN ist via roleAllows immer dabei
 
 export async function createUser(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireRole([...MANAGE_ROLES]);
   const r = userCreateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const { name, email, password, role, personId } = r.data;
 
   // Rolle muss für den Ersteller zulässig sein.
@@ -53,7 +53,7 @@ export async function updateUser(_p: ActionState, fd: FormData): Promise<ActionS
   const actor = await requireRole([...MANAGE_ROLES]);
   const id = String(fd.get("id") ?? "");
   const r = userEditSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   const { name, email, role, personId } = r.data;
 
   const target = await prisma.user.findFirst({

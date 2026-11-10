@@ -82,7 +82,7 @@ export default async function ReportsPage() {
         {kpis.map((k) => (
           <Card key={k.key}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle as="p" className="text-sm font-medium text-muted-foreground">
                 {t(`dashboard.${k.key}`)}
               </CardTitle>
               <k.icon className="size-4 text-muted-foreground" />

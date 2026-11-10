@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/rbac";
 import { getAccessScope, canSeeEntity, usersWhoCanSee } from "@/lib/access";
 import { byUrgency, mergeTimeline, splitMentions, type CollabEntity, type TimelineItem } from "@/lib/collab";
-import { intlLocale } from "@/lib/format";
+import { intlLocale, APP_TIME_ZONE } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +38,7 @@ export async function RecordTimeline({ user, entity, entityId }: { user: Session
   const now = new Date();
   const openTasks = tasks.filter((x) => !x.done).sort(byUrgency);
   const names = users.map((u) => u.name);
-  const dt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+  const dt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: APP_TIME_ZONE });
   const d = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
 
   const items = mergeTimeline([

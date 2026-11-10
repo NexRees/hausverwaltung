@@ -277,7 +277,19 @@
     "point1": "Demonstrativos de encargos por BetrKV e HeizkostenV",
     "point2": "Demonstrativos anuais de condomínio, reuniões e reservas",
     "point3": "Portais de inquilinos/proprietários e assistente de IA",
-    "demoTitle": "Acessos de demonstração"
+    "demoTitle": "Acessos de demonstração",
+    "unavailable": "No momento não é possível entrar. Tente novamente mais tarde.",
+    "authError": {
+      "accessDenied": "Nenhum acesso foi configurado para esta conta. Entre em contato com a administradora.",
+      "configuration": "No momento não é possível entrar. Tente novamente mais tarde.",
+      "default": "Não foi possível entrar. Tente novamente."
+    }
+  },
+  "legal": {
+    "label": "Informações legais",
+    "imprint": "Aviso legal",
+    "privacy": "Privacidade",
+    "compliance": "Orientado ao RGPD e à GoBD"
   },
   "fields": {
     "name": "Nome",
@@ -908,7 +920,25 @@
     },
     "hoa": "Informações do condomínio",
     "resolutions": "Deliberações",
-    "noResolutions": "Nenhuma deliberação."
+    "noResolutions": "Nenhuma deliberação.",
+    "accountMenu": "Conta: {name}",
+    "openTotal": "Total em aberto",
+    "dueNow": "Vencidos e a vencer hoje",
+    "dueSoon": "A vencer",
+    "dueOn": "vence em {date}",
+    "dueToday": "vence hoje",
+    "overdueSince": "vencido desde {date}",
+    "partlyPaid": "já pago: {amount}",
+    "paymentsPeriod": "Pagamentos dos últimos 12 meses",
+    "colDate": "Data",
+    "colType": "Tipo",
+    "colAmount": "Valor",
+    "contact": "Contato",
+    "phone": "Telefone",
+    "email": "E-mail",
+    "noContact": "A administradora ainda não informou dados de contato.",
+    "unassignedTitle": "Nenhum imóvel vinculado ainda",
+    "unassigned": "Seu acesso ainda não está vinculado a um imóvel – entre em contato com {company}."
   },
   "tickets": {
     "title": "Manutenção",
@@ -1206,7 +1236,8 @@
     "placeholder": "Imóveis, unidades, pessoas…",
     "prompt": "Informe um termo para pesquisar imóveis, unidades, pessoas e contratos.",
     "resultsFor": "{count, plural, one {# resultado} other {# resultados}} para “{q}”",
-    "noResults": "Nenhum resultado."
+    "noResults": "Nenhum resultado.",
+    "showing": "Mostrando {shown} de {total} — refine a pesquisa para ver mais."
   },
   "setupColors": {
     "indigo": "Índigo",
@@ -1375,6 +1406,46 @@
     "empty": "Ainda sem tarefas, comentários ou alterações.",
     "taskCreated": "Tarefa “{title}” de {by} para {to}",
     "taskDone": "Tarefa “{title}” concluída ({name})"
+  },
+  "a11y": {
+    "navigation": "Navegação",
+    "navigationDescription": "Seções e páginas do aplicativo",
+    "mainNavigation": "Navegação principal",
+    "toggleSidebar": "Mostrar ou ocultar a barra lateral",
+    "close": "Fechar",
+    "skipToContent": "Pular para o conteúdo",
+    "pagination": "Páginas",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "resultCount": "{count, plural, =0 {Nenhum resultado} one {# resultado} other {# resultados}}",
+    "unreadCount": "{count, plural, =0 {nenhuma não lida} one {# não lida} other {# não lidas}}",
+    "notificationsRegion": "Notificações",
+    "loadingPage": "Carregando página …",
+    "deleteItem": "Excluir “{name}”",
+    "deleteItemTitle": "Excluir “{name}” mesmo?",
+    "editorLabel": "Conteúdo do texto",
+    "filterProperty": "Imóvel",
+    "filterYear": "Ano",
+    "filterStatus": "Status",
+    "filterType": "Tipo",
+    "filterLease": "Contrato de locação",
+    "filterDirection": "Direção",
+    "markDone": "Marcar “{name}” como concluída"
+  },
+  "ux": {
+    "offline": "Sem conexão com o servidor. Verifique sua conexão e tente novamente.",
+    "failed": "Não funcionou. Seus dados continuam aqui – tente novamente.",
+    "discardChanges": "Descartar dados não salvos?",
+    "errorTitle": "Esta página não pôde ser exibida",
+    "errorBody": "Ocorreu um erro inesperado. Tente novamente. Se persistir, informe ao suporte o código do erro.",
+    "errorRef": "Código do erro: {ref}",
+    "retry": "Tentar novamente",
+    "toDashboard": "Ir para o painel",
+    "notFoundTitle": "Página não encontrada",
+    "notFoundBody": "Esta página não existe ou o registro foi excluído. Verifique o endereço ou vá para o painel.",
+    "deleteBlocked": "Não é possível excluir: {reason}"
   },
   "nexrees": {
     "statementLate": {

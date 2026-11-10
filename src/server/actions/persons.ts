@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
-import { personSchema, type ActionState } from "@/lib/schemas";
+import { personSchema, type ActionState, invalid } from "@/lib/schemas";
 import { pickCustom } from "@/lib/custom";
 import { bookAs } from "@/server/ledger";
 
@@ -11,7 +11,7 @@ export async function createPerson(_p: ActionState, fd: FormData): Promise<Actio
   const user = await requireWriter();
   const entries = Object.fromEntries(fd);
   const r = personSchema.safeParse(entries);
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   await prisma.person.create({ data: { ...r.data, custom: pickCustom(entries), tenantId: user.tenantId } });
   revalidatePath("/", "layout");
   return { ok: true };
@@ -22,7 +22,7 @@ export async function updatePerson(_p: ActionState, fd: FormData): Promise<Actio
   const id = String(fd.get("id") ?? "");
   const entries = Object.fromEntries(fd);
   const r = personSchema.safeParse(entries);
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   // Leere Felder im Formular löschen den Wert (undefined würde Prisma ignorieren).
   const data = Object.fromEntries(Object.entries(r.data).map(([k, v]) => [k, v ?? null]));
   await prisma.person.updateMany({ where: { id, tenantId: user.tenantId }, data: { ...data, custom: pickCustom(entries) } });

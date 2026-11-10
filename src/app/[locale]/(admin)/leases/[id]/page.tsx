@@ -216,7 +216,11 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
                         </div>
                       )}
                     </div>
-                    <DeleteButton action={deleteDeposit} id={dep.id} />
+                    <DeleteButton
+                      action={deleteDeposit}
+                      id={dep.id}
+                      itemName={`${t("deposit.title")} ${money(Number(dep.amount), locale)}`}
+                    />
                   </div>
                 );
               })()
@@ -250,7 +254,11 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
                   <TableCell className="text-right">{money(Number(c.amount), locale)}</TableCell>
                   <TableCell>
                     <div className="flex justify-end">
-                      <DeleteButton action={deleteComponent} id={c.id} />
+                      <DeleteButton
+                        action={deleteComponent}
+                        id={c.id}
+                        itemName={`${t(`rentComponentType.${c.type}`)}${c.note ? ` · ${c.note}` : ""}`}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

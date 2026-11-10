@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { saveFile, deleteFile } from "@/lib/storage";
-import { brandingSchema, type ActionState } from "@/lib/schemas";
+import { brandingSchema, type ActionState, invalid } from "@/lib/schemas";
 
 export async function updateBranding(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireRole([]); // nur ADMIN (leere Liste → roleAllows nur ADMIN)
   const r = brandingSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   await prisma.tenant.update({
     where: { id: user.tenantId },
     data: { brandColor: fd.get("resetColor") ? null : r.data.brandColor || null }, // #61 Zurücksetzen

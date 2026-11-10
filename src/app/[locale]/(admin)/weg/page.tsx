@@ -96,7 +96,7 @@ export default async function WegPage({
       <form className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("weg.property")}</label>
-          <select name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterProperty")} name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {wegProps.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -104,7 +104,7 @@ export default async function WegPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("statements.year")}</label>
-          <select name="year" defaultValue={year} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterYear")} name="year" defaultValue={year} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {years.map((y) => (<option key={y} value={y}>{y}</option>))}
           </select>
         </div>
@@ -160,7 +160,7 @@ export default async function WegPage({
                       units={unitOpts}
                       subcommunity={{ id: s.id!, name: s.name!, unitIds: s.units.map((u) => u.id) }}
                     />
-                    <DeleteButton action={deleteSubcommunity} id={s.id!} />
+                    <DeleteButton action={deleteSubcommunity} id={s.id!} itemName={s.name ?? undefined} />
                   </div>
                 </div>
               ))
@@ -267,7 +267,7 @@ export default async function WegPage({
                   <TableHead>{t("weg.scope")}</TableHead>
                   <TableHead>{t("statements.method")}</TableHead>
                   <TableHead className="text-right">{t("fields.amount")}</TableHead>
-                  <TableHead className="w-16" />
+                  <TableHead className="w-16"><span className="sr-only">{t("common.actions")}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -284,7 +284,11 @@ export default async function WegPage({
                     <TableCell className="text-right">{money(Number(c.amount), locale)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end">
-                        <DeleteButton action={deleteCost} id={c.id} />
+                        <DeleteButton
+                          action={deleteCost}
+                          id={c.id}
+                          itemName={[t(`costType.${c.type}`), c.note, money(Number(c.amount), locale)].filter(Boolean).join(" · ")}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -361,7 +365,7 @@ export default async function WegPage({
                     </div>
                     <div className="flex items-center gap-1">
                       <ReserveTxDialog reserveId={r.id} />
-                      <DeleteButton action={deleteReserve} id={r.id} />
+                      <DeleteButton action={deleteReserve} id={r.id} itemName={r.name} />
                     </div>
                   </div>
                   {r.transactions.length > 0 && (
@@ -376,7 +380,11 @@ export default async function WegPage({
                             <span className={Number(tx.amount) < 0 ? "text-destructive" : ""}>
                               {money(Number(tx.amount), locale)}
                             </span>
-                            <DeleteButton action={deleteReserveTx} id={tx.id} />
+                            <DeleteButton
+                              action={deleteReserveTx}
+                              id={tx.id}
+                              itemName={`${r.name} · ${tx.date.toISOString().slice(0, 10)} · ${money(Number(tx.amount), locale)}`}
+                            />
                           </div>
                         </div>
                       ))}

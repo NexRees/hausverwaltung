@@ -277,7 +277,19 @@
     "point1": "Service-charge statements per BetrKV & HeizkostenV",
     "point2": "HOA annual statements, meetings & reserves",
     "point3": "Tenant/owner portals and AI assistant",
-    "demoTitle": "Demo logins"
+    "demoTitle": "Demo logins",
+    "unavailable": "Sign-in is currently not possible. Please try again later.",
+    "authError": {
+      "accessDenied": "No access has been set up for this account. Please contact your property manager.",
+      "configuration": "Sign-in is currently not possible. Please try again later.",
+      "default": "Sign-in failed. Please try again."
+    }
+  },
+  "legal": {
+    "label": "Legal information",
+    "imprint": "Legal notice",
+    "privacy": "Privacy",
+    "compliance": "Designed with GDPR & GoBD in mind"
   },
   "fields": {
     "name": "Name",
@@ -908,7 +920,25 @@
     },
     "hoa": "HOA information",
     "resolutions": "Resolutions",
-    "noResolutions": "No resolutions."
+    "noResolutions": "No resolutions.",
+    "accountMenu": "Account: {name}",
+    "openTotal": "Total open",
+    "dueNow": "Due and overdue",
+    "dueSoon": "Due soon",
+    "dueOn": "due on {date}",
+    "dueToday": "due today",
+    "overdueSince": "overdue since {date}",
+    "partlyPaid": "already paid: {amount}",
+    "paymentsPeriod": "Payments in the last 12 months",
+    "colDate": "Date",
+    "colType": "Type",
+    "colAmount": "Amount",
+    "contact": "Contact",
+    "phone": "Phone",
+    "email": "Email",
+    "noContact": "Your property manager has not added contact details yet.",
+    "unassignedTitle": "No home linked yet",
+    "unassigned": "Your account is not linked to a home yet – please contact {company}."
   },
   "tickets": {
     "title": "Maintenance",
@@ -1206,7 +1236,8 @@
     "placeholder": "Properties, units, people…",
     "prompt": "Enter a search term to search properties, units, people and leases.",
     "resultsFor": "{count, plural, one {# result} other {# results}} for “{q}”",
-    "noResults": "No results."
+    "noResults": "No results.",
+    "showing": "Showing {shown} of {total} — refine the search to see more."
   },
   "setupColors": {
     "indigo": "Indigo",
@@ -1375,6 +1406,46 @@
     "empty": "No tasks, comments or changes yet.",
     "taskCreated": "Task “{title}” from {by} to {to}",
     "taskDone": "Task “{title}” done ({name})"
+  },
+  "a11y": {
+    "navigation": "Navigation",
+    "navigationDescription": "Sections and pages of the app",
+    "mainNavigation": "Main navigation",
+    "toggleSidebar": "Show or hide the sidebar",
+    "close": "Close",
+    "skipToContent": "Skip to content",
+    "pagination": "Pages",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "resultCount": "{count, plural, =0 {No results} one {# result} other {# results}}",
+    "unreadCount": "{count, plural, =0 {none unread} one {# unread} other {# unread}}",
+    "notificationsRegion": "Notifications",
+    "loadingPage": "Loading page …",
+    "deleteItem": "Delete “{name}”",
+    "deleteItemTitle": "Really delete “{name}”?",
+    "editorLabel": "Text content",
+    "filterProperty": "Property",
+    "filterYear": "Year",
+    "filterStatus": "Status",
+    "filterType": "Type",
+    "filterLease": "Lease",
+    "filterDirection": "Direction",
+    "markDone": "Mark “{name}” as done"
+  },
+  "ux": {
+    "offline": "No connection to the server. Please check your connection and try again.",
+    "failed": "That did not work. Your input is still here – please try again.",
+    "discardChanges": "Discard unsaved input?",
+    "errorTitle": "This page could not be shown",
+    "errorBody": "An unexpected error occurred. Please try again. If it persists, give support the error reference.",
+    "errorRef": "Error reference: {ref}",
+    "retry": "Try again",
+    "toDashboard": "Go to dashboard",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This page does not exist or the record was deleted. Check the address or go to the dashboard.",
+    "deleteBlocked": "Cannot delete: {reason}"
   },
   "nexrees": {
     "statementLate": {

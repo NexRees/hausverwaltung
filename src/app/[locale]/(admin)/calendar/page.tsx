@@ -120,14 +120,14 @@ export default async function CalendarPage({
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base capitalize">{monthName}</CardTitle>
           <div className="flex gap-1">
-            <Button variant="outline" size="icon" render={<Link href={`/calendar?year=${prev.year}&month=${prev.month}`} />}>
-              <ChevronLeft className="size-4" />
+            <Button variant="outline" size="icon" aria-label={t("a11y.previousMonth")} title={t("a11y.previousMonth")} render={<Link href={`/calendar?year=${prev.year}&month=${prev.month}`} rel="prev" />}>
+              <ChevronLeft aria-hidden className="size-4" />
             </Button>
             <Button variant="outline" size="sm" render={<Link href="/calendar" />}>
               {t("calendar.today")}
             </Button>
-            <Button variant="outline" size="icon" render={<Link href={`/calendar?year=${next.year}&month=${next.month}`} />}>
-              <ChevronRight className="size-4" />
+            <Button variant="outline" size="icon" aria-label={t("a11y.nextMonth")} title={t("a11y.nextMonth")} render={<Link href={`/calendar?year=${next.year}&month=${next.month}`} rel="next" />}>
+              <ChevronRight aria-hidden className="size-4" />
             </Button>
           </div>
         </CardHeader>

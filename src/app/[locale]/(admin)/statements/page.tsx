@@ -79,7 +79,7 @@ export default async function StatementsPage({
       <form className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("statements.selectProperty")}</label>
-          <select name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterProperty")} name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {properties.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -87,7 +87,7 @@ export default async function StatementsPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("statements.year")}</label>
-          <select name="year" defaultValue={year} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterYear")} name="year" defaultValue={year} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {years.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
@@ -171,7 +171,7 @@ export default async function StatementsPage({
                   <TableHead className="text-right">{t("statements.allocated")}</TableHead>
                   <TableHead className="text-right">{t("statements.prepayment")}</TableHead>
                   <TableHead className="text-right">{t("statements.balance")}</TableHead>
-                  {canPdf && <TableHead className="w-10" />}
+                  {canPdf && <TableHead className="w-10"><span className="sr-only">{t("common.actions")}</span></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>

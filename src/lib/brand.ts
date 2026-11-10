@@ -9,6 +9,9 @@ export const BRAND = {
   website: "https://nexrees.de",
   sourceUrl: process.env.NEXT_PUBLIC_SOURCE_URL || "https://github.com/NexRees/hausverwaltung",
   issuesUrl: "https://github.com/NexRees/hausverwaltung/issues",
+  // Impressum (§ 5 DDG) and privacy notice (Art. 13 DSGVO), linked from login, setup and portal.
+  imprintUrl: process.env.NEXT_PUBLIC_IMPRINT_URL || "https://nexrees.de/impressum",
+  privacyUrl: process.env.NEXT_PUBLIC_PRIVACY_URL || "https://nexrees.de/datenschutz",
   upstream: {
     name: "HaVeWa",
     author: "Florian Gilde",

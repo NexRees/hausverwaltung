@@ -6,15 +6,21 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { oidcConfigFromEnv, resolveSsoUser } from "@/lib/sso";
 import { provisionPolicyFromEnv, provisionSsoUser } from "@/lib/sso-provision";
+import { escapeLike, normalizeEmail, pickLoginUser } from "@/lib/login-email";
 
 const providers: Provider[] = [
   Credentials({
     credentials: { email: {}, password: {} },
     authorize: async (creds) => {
-      const email = String(creds?.email ?? "");
+      // nexrees: e-mail ignores case and spaces ("Mieter@…" signs in as "mieter@…").
+      const email = normalizeEmail(creds?.email);
       const password = String(creds?.password ?? "");
       if (!email || !password) return null;
-      const user = await prisma.user.findUnique({ where: { email } });
+      const candidates = await prisma.user.findMany({
+        where: { email: { equals: escapeLike(email), mode: "insensitive" } },
+        take: 5,
+      });
+      const user = pickLoginUser(candidates, email);
       if (!user) return null;
       const ok = await bcrypt.compare(password, user.passwordHash);
       if (!ok) return null;
@@ -39,7 +45,8 @@ const provisionPolicy = oidc ? provisionPolicyFromEnv() : null;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  // nexrees: Auth.js errors (SSO refused, misconfiguration) show on our localized login page.
+  pages: { signIn: "/login", error: "/login" },
   providers,
   callbacks: {
     // SSO meldet nur bestehende Benutzer an (kein Auto-Provisioning).

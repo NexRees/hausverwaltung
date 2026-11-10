@@ -1,8 +1,12 @@
 import { z } from "zod";
 import { routing } from "@/i18n/routing";
 import { normalizePostalAddress, postalAddressError } from "@/lib/postal-address";
+import { installGermanZodMessages } from "@/lib/zod-de";
 import { passwordProblem } from "@/lib/password-policy";
 import { ibanValid, normalizeIban, mandateRefValid } from "@/lib/sepa-validate";
+
+// nexrees: plain-German zod messages everywhere these schemas are used (UI, portal, API, MCP)
+installGermanZodMessages();
 
 // nexrees: zod adapter for the shared password policy
 function passwordRule(v: string, ctx: z.RefinementCtx) {
@@ -11,7 +15,24 @@ function passwordRule(v: string, ctx: z.RefinementCtx) {
 }
 
 // notice: Ergebnis des Postausgangs (#79) für die Rückmeldung im Dialog
-export type ActionState = { ok?: boolean; error?: string; notice?: "sent" | "queued" | "draft" | "failed" };
+// nexrees: fieldErrors = first message per form field (by input name), so the form can mark the
+// field (aria-invalid) and show the message next to it; `error` stays the one-line summary.
+export type ActionState = {
+  ok?: boolean;
+  error?: string;
+  notice?: "sent" | "queued" | "draft" | "failed";
+  fieldErrors?: Record<string, string>;
+};
+
+/** nexrees: failed validation → ActionState with a summary and one message per field. */
+export function invalid(err: z.ZodError): ActionState {
+  const fieldErrors: Record<string, string> = {};
+  for (const issue of err.issues) {
+    const key = issue.path.length ? String(issue.path[0]) : "";
+    if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+  }
+  return { error: err.issues[0]?.message ?? "Ungültige Eingabe", fieldErrors };
+}
 
 const optionalStr = z
   .string()

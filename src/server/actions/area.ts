@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
-import { areaAllocationSchema, type ActionState } from "@/lib/schemas";
+import { areaAllocationSchema, type ActionState, invalid } from "@/lib/schemas";
 
 function fail(msg?: string): ActionState {
   return { error: msg ?? "Ungültige Eingabe" };
@@ -30,7 +30,7 @@ async function checkRefs(tenantId: string, propertyId: string, leaseId?: string,
 export async function createAreaAllocation(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = areaAllocationSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const err = await checkRefs(user.tenantId, r.data.propertyId, r.data.leaseId, r.data.personId);
   if (err) return fail(err);
   await prisma.areaAllocation.create({ data: { ...r.data, tenantId: user.tenantId } });
@@ -41,7 +41,7 @@ export async function updateAreaAllocation(_p: ActionState, fd: FormData): Promi
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = areaAllocationSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const err = await checkRefs(user.tenantId, r.data.propertyId, r.data.leaseId, r.data.personId);
   if (err) return fail(err);
   const { propertyId, ...data } = r.data;

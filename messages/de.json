@@ -277,7 +277,19 @@
     "point1": "Betriebskostenabrechnung nach BetrKV & HeizkostenV",
     "point2": "WEG-Jahresabrechnung, Versammlungen & Rücklagen",
     "point3": "Mieter-/Eigentümer-Portale und KI-Assistent",
-    "demoTitle": "Demo-Zugänge"
+    "demoTitle": "Demo-Zugänge",
+    "unavailable": "Anmeldung derzeit nicht möglich. Bitte versuchen Sie es später erneut.",
+    "authError": {
+      "accessDenied": "Für dieses Konto ist kein Zugang eingerichtet. Bitte wenden Sie sich an Ihre Verwaltung.",
+      "configuration": "Die Anmeldung ist derzeit nicht möglich. Bitte versuchen Sie es später erneut.",
+      "default": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "legal": {
+    "label": "Rechtliche Hinweise",
+    "imprint": "Impressum",
+    "privacy": "Datenschutz",
+    "compliance": "DSGVO- & GoBD-orientiert"
   },
   "fields": {
     "name": "Name",
@@ -908,7 +920,25 @@
     },
     "hoa": "WEG-Informationen",
     "resolutions": "Beschlüsse",
-    "noResolutions": "Keine Beschlüsse."
+    "noResolutions": "Keine Beschlüsse.",
+    "accountMenu": "Konto: {name}",
+    "openTotal": "Offen gesamt",
+    "dueNow": "Fällig und überfällig",
+    "dueSoon": "Demnächst fällig",
+    "dueOn": "fällig am {date}",
+    "dueToday": "heute fällig",
+    "overdueSince": "überfällig seit {date}",
+    "partlyPaid": "bereits bezahlt: {amount}",
+    "paymentsPeriod": "Zahlungen der letzten 12 Monate",
+    "colDate": "Datum",
+    "colType": "Art",
+    "colAmount": "Betrag",
+    "contact": "Kontakt",
+    "phone": "Telefon",
+    "email": "E-Mail",
+    "noContact": "Ihre Verwaltung hat noch keine Kontaktdaten hinterlegt.",
+    "unassignedTitle": "Noch keine Wohnung zugeordnet",
+    "unassigned": "Ihr Zugang ist noch keiner Wohnung zugeordnet – bitte wenden Sie sich an {company}."
   },
   "tickets": {
     "title": "Instandhaltung",
@@ -1206,7 +1236,8 @@
     "placeholder": "Objekte, Einheiten, Personen…",
     "prompt": "Suchbegriff eingeben, um Objekte, Einheiten, Personen und Verträge zu durchsuchen.",
     "resultsFor": "{count, plural, one {# Treffer} other {# Treffer}} für „{q}\"",
-    "noResults": "Keine Treffer."
+    "noResults": "Keine Treffer.",
+    "showing": "{shown} von {total} angezeigt — Suche verfeinern, um mehr zu sehen."
   },
   "setupColors": {
     "indigo": "Indigo",
@@ -1375,6 +1406,46 @@
     "empty": "Noch keine Aufgaben, Kommentare oder Änderungen.",
     "taskCreated": "Aufgabe „{title}“ von {by} an {to}",
     "taskDone": "Aufgabe „{title}“ erledigt ({name})"
+  },
+  "a11y": {
+    "navigation": "Navigation",
+    "navigationDescription": "Bereiche und Seiten der Verwaltung",
+    "mainNavigation": "Hauptnavigation",
+    "toggleSidebar": "Seitenleiste ein- oder ausblenden",
+    "close": "Schließen",
+    "skipToContent": "Zum Inhalt springen",
+    "pagination": "Seiten",
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "previousMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "resultCount": "{count, plural, =0 {Keine Treffer} one {# Treffer} other {# Treffer}}",
+    "unreadCount": "{count, plural, =0 {keine ungelesen} one {# ungelesen} other {# ungelesen}}",
+    "notificationsRegion": "Meldungen",
+    "loadingPage": "Seite wird geladen …",
+    "deleteItem": "„{name}“ löschen",
+    "deleteItemTitle": "„{name}“ wirklich löschen?",
+    "editorLabel": "Textinhalt",
+    "filterProperty": "Objekt",
+    "filterYear": "Jahr",
+    "filterStatus": "Status",
+    "filterType": "Art",
+    "filterLease": "Mietvertrag",
+    "filterDirection": "Richtung",
+    "markDone": "„{name}“ als erledigt markieren"
+  },
+  "ux": {
+    "offline": "Keine Verbindung zum Server. Bitte Verbindung prüfen und erneut versuchen.",
+    "failed": "Das hat nicht geklappt. Ihre Eingaben sind noch da – bitte erneut versuchen.",
+    "discardChanges": "Ungespeicherte Eingaben verwerfen?",
+    "errorTitle": "Diese Seite konnte nicht angezeigt werden",
+    "errorBody": "Ein unerwarteter Fehler ist aufgetreten. Bitte erneut versuchen. Bleibt der Fehler, nennen Sie dem Support die Fehlernummer.",
+    "errorRef": "Fehlernummer: {ref}",
+    "retry": "Erneut versuchen",
+    "toDashboard": "Zur Übersicht",
+    "notFoundTitle": "Seite nicht gefunden",
+    "notFoundBody": "Diese Seite gibt es nicht oder der Eintrag wurde gelöscht. Prüfen Sie die Adresse oder wechseln Sie zur Übersicht.",
+    "deleteBlocked": "Löschen nicht möglich: {reason}"
   },
   "nexrees": {
     "statementLate": {

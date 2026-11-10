@@ -72,8 +72,12 @@ as relative.
 - **Production sizing is unchanged** (`db.t4g.micro`, 0.5 vCPU / 1 GB, 1 task). Recommended before
   go-live with 2,000+ units: 2 app tasks (zero-downtime deploys, now safe) and `db.t4g.small`.
   That is a cost decision (budget is $150/month).
-- **Public API lists** (`/api/v1` charges, payments, persons...) still return everything. Paging
-  them changes the API contract; do it with the LLM/workflow integration work.
+- ~~**Public API lists** (`/api/v1` charges, payments, persons...) still return everything.~~ Done
+  ("Agent-ready API and MCP" in `NEXREES.md`): `?limit`/`?offset`/`?q` page them with
+  `X-Total-Count` and `Link`; without parameters at most 5,000 rows (`X-Result-Truncated`).
+  `/api/v1/charges` on this dataset: `?limit=5` 1.4 KB in 0.03-0.1 s; no parameters 5,000 rows,
+  1.4 MB in 0.3-0.4 s (before: 56,871 rows, 7.3 MB, 3.3 s). MCP `list_charges`: 30 KB for the
+  default 50 rows (before: 11.9 MB).
 - **Pages still above 2 MB:** Zensus (5.8 MB), Documents (filter dropdowns list every unit and
   person), Finances. Fine at this size; switch to search-as-you-type pickers before 10,000 units.
 - **Not covered by this test:** many users at once, PDF/letter generation at volume, IMAP and

@@ -90,8 +90,9 @@ export default async function DunningPage({
 
       <form className="flex items-end gap-3">
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">{t("dunning.minDays")}</label>
+          <label htmlFor="minDays" className="text-xs text-muted-foreground">{t("dunning.minDays")}</label>
           <input
+            id="minDays"
             name="minDays"
             type="number"
             defaultValue={minDays}

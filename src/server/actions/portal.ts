@@ -1,5 +1,7 @@
 "use server";
 
+import { invalid } from "@/lib/schemas";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +18,7 @@ const issueSchema = z.object({
 export async function reportIssue(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireUser();
   const r = issueSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { personId: true } });
   if (!dbUser?.personId) return { error: "Kein Personenbezug" };

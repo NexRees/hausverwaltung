@@ -72,7 +72,7 @@ export default async function MeetingsPage({
       <form className="flex items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("meetings.property")}</label>
-          <select name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("a11y.filterProperty")} name="propertyId" defaultValue={propertyId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             {wegProps.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
           </select>
         </div>

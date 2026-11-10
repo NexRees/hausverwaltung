@@ -1,3 +1,5 @@
+import { tokenizedWhere, SEARCH_FIELDS } from "@/lib/search";
+import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +21,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { deletePerson } from "@/server/actions/persons";
 import { Pager } from "@/components/pager";
 import { ListFilter } from "@/components/list-filter";
-import { listParams, listHref, pageCount, icontains } from "@/lib/list-params";
+import { listParams, listHref, pageCount } from "@/lib/list-params";
 
 const GROUPS = ["MIETER", "EIGENTUEMER", "INTERESSENT", "HANDWERKER", "MAKLER", "BANK", "SONSTIGE"] as const;
 
@@ -37,9 +39,8 @@ export default async function PersonsPage({
   const where = {
     tenantId: user.tenantId,
     ...(active ? { type: active as (typeof GROUPS)[number] } : {}),
-    ...(lp.q
-      ? { OR: [{ lastName: icontains(lp.q) }, { firstName: icontains(lp.q) }, { email: icontains(lp.q) }, { phone: icontains(lp.q) }] }
-      : {}),
+    // nexrees: every word must match ("Erika Mustermann", "Lindenstraße W01")
+    ...tokenizedWhere<Prisma.PersonWhereInput>(lp.q, SEARCH_FIELDS.person),
   };
 
   const [persons, total, customDefs] = await Promise.all([
@@ -151,7 +152,7 @@ export default async function PersonsPage({
                             custom: (p.custom as Record<string, string>) ?? {},
                           }}
                         />
-                        <DeleteButton action={deletePerson} id={p.id} />
+                        <DeleteButton action={deletePerson} id={p.id} itemName={[p.firstName, p.lastName].filter(Boolean).join(" ")} />
                       </div>
                     </TableCell>
                   </TableRow>

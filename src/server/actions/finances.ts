@@ -10,6 +10,7 @@ import {
   mandateSchema,
   generateSchema,
   type ActionState,
+  invalid,
 } from "@/lib/schemas";
 import { parseCamt053 } from "@/lib/adapters/bankImport";
 import { ensureDefaultAccounts } from "@/lib/accounts";
@@ -41,7 +42,7 @@ function done(): ActionState {
 export async function createAccount(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = accountSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   await prisma.account.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
 }
@@ -49,7 +50,7 @@ export async function updateAccount(_p: ActionState, fd: FormData): Promise<Acti
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
   const r = accountSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const acc = await prisma.account.findFirst({ where: { id, tenantId: user.tenantId }, select: { id: true } });
   if (!acc) return fail("Konto nicht gefunden");
   await prisma.account.update({ where: { id: acc.id }, data: { name: r.data.name, type: r.data.type, iban: r.data.iban ?? null } });
@@ -68,7 +69,7 @@ export async function deleteAccount(fd: FormData): Promise<void | { error: strin
 export async function createCharge(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = chargeSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   // nexrees: through bookAs so a closed period (Festschreibung) is refused with a clear message
   const locked = await bookAs(user, (tx) => tx.charge.create({ data: { ...r.data, tenantId: user.tenantId } }));
   return locked ?? done();
@@ -86,7 +87,7 @@ export async function deleteCharge(fd: FormData): Promise<void | { error: string
 export async function generateCharges(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = generateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const [y, m] = r.data.month.split("-").map(Number);
   const first = new Date(Date.UTC(y, m - 1, 1));
   const last = new Date(Date.UTC(y, m, 0));
@@ -124,7 +125,7 @@ export async function generateCharges(_p: ActionState, fd: FormData): Promise<Ac
 export async function createPayment(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = paymentSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   // Zugehörigkeit prüfen (Charge/Account des Mandanten)
   if (r.data.chargeId) {
     const c = await prisma.charge.findFirst({ where: { id: r.data.chargeId, tenantId: user.tenantId }, select: { id: true } });
@@ -170,7 +171,7 @@ export async function updatePaymentDetails(_p: ActionState, fd: FormData): Promi
 export async function createMandate(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = mandateSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const p = await prisma.person.findFirst({ where: { id: r.data.personId, tenantId: user.tenantId }, select: { id: true } });
   if (!p) return fail("Person nicht gefunden");
   await prisma.sepaMandate.create({ data: { ...r.data, tenantId: user.tenantId } });

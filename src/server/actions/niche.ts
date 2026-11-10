@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
-import { insuranceSchema, propertyTaxSchema, type ActionState } from "@/lib/schemas";
+import { insuranceSchema, propertyTaxSchema, type ActionState, invalid } from "@/lib/schemas";
 import { insuranceYearAmount } from "@/lib/insurance";
 import { asActor, uiActor } from "@/server/ledger";
 
@@ -68,7 +68,7 @@ export async function bookInsuranceAsCost(fd: FormData): Promise<void> {
 export async function createInsurance(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = insuranceSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   if (!(await assertProperty(user.tenantId, r.data.propertyId))) return { error: "Objekt nicht gefunden" };
   await prisma.insurance.create({ data: { ...r.data, tenantId: user.tenantId } });
   revalidatePath("/", "layout");
@@ -85,7 +85,7 @@ export async function deleteInsurance(fd: FormData): Promise<void> {
 export async function upsertPropertyTax(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = propertyTaxSchema.safeParse(Object.fromEntries(fd));
-  if (!r.success) return { error: r.error.issues[0]?.message ?? "Ungültige Eingabe" };
+  if (!r.success) return invalid(r.error);
   if (!(await assertProperty(user.tenantId, r.data.propertyId))) return { error: "Objekt nicht gefunden" };
   const { propertyId, ...data } = r.data;
   await prisma.propertyTax.upsert({

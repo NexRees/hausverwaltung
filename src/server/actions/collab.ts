@@ -1,5 +1,7 @@
 "use server";
 
+import { invalid } from "@/lib/schemas";
+
 // nexrees: tasks handed between colleagues and comments with @mentions on records.
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -35,7 +37,7 @@ async function staffIds(tenantId: string): Promise<Set<string>> {
 export async function saveTask(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = taskInput.safeParse(Object.fromEntries(fd));
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const d = r.data;
   const scope = await getAccessScope(user);
 
@@ -118,7 +120,7 @@ const commentInput = z.object({
 export async function addComment(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
   const r = commentInput.safeParse({ entity: fd.get("entity"), entityId: fd.get("entityId"), body: fd.get("body") });
-  if (!r.success) return fail(r.error.issues[0]?.message);
+  if (!r.success) return invalid(r.error);
   const { entity, entityId, body } = r.data;
   if (!isCollabEntity(entity)) return fail();
   const scope = await getAccessScope(user);

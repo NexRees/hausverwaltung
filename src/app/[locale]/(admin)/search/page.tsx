@@ -1,9 +1,22 @@
 import { getTranslations } from "next-intl/server";
-import { Building2, DoorOpen, Users, FileSignature, FileText } from "lucide-react";
+import { Building2, DoorOpen, Users, FileSignature, FileText, Wrench } from "lucide-react";
 import { requireUser } from "@/lib/rbac";
-import { prisma } from "@/lib/prisma";
+import { searchEntities, type SearchEntity, type SearchHit } from "@/lib/search";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// nexrees: one search (src/lib/search.ts) for this page and the API: every word must match, so
+// "Erika Mustermann" finds the person; people link to their page; tickets are searched too; group
+// counts are real totals ("20 of 134"), not the number shown.
+const CAP = 20;
+const GROUPS: { entity: SearchEntity; key: string; icon: typeof Building2 }[] = [
+  { entity: "property", key: "properties", icon: Building2 },
+  { entity: "unit", key: "units", icon: DoorOpen },
+  { entity: "person", key: "persons", icon: Users },
+  { entity: "lease", key: "leases", icon: FileSignature },
+  { entity: "ticket", key: "tickets", icon: Wrench },
+  { entity: "document", key: "documents", icon: FileText },
+];
 
 export default async function SearchPage({
   searchParams,
@@ -16,91 +29,29 @@ export default async function SearchPage({
   const tenantId = user.tenantId;
   const q = (sp.q ?? "").trim();
 
-  const like = { contains: q, mode: "insensitive" as const };
+  const result = await searchEntities(tenantId, q, { limit: CAP, entities: GROUPS.map((g) => g.entity) });
+  const total = result.total;
 
-  const [properties, units, persons, leases, documents] = q
-    ? await Promise.all([
-        prisma.property.findMany({
-          where: { tenantId, OR: [{ name: like }, { street: like }, { city: like }, { zip: like }] },
-          take: 20,
-        }),
-        prisma.unit.findMany({
-          where: { tenantId, label: like },
-          include: { building: { include: { property: { select: { name: true } } } } },
-          take: 20,
-        }),
-        prisma.person.findMany({
-          where: { tenantId, OR: [{ firstName: like }, { lastName: like }, { email: like }] },
-          take: 20,
-        }),
-        prisma.lease.findMany({
-          where: {
-            tenantId,
-            OR: [
-              { unit: { label: like } },
-              { renters: { some: { person: { OR: [{ firstName: like }, { lastName: like }] } } } },
-            ],
-          },
-          include: { unit: { select: { label: true } } },
-          take: 20,
-        }),
-        prisma.document.findMany({
-          where: {
-            tenantId,
-            OR: [
-              { name: like },
-              { property: { name: like } },
-              { unit: { label: like } },
-              { person: { OR: [{ firstName: like }, { lastName: like }] } },
-            ],
-          },
-          include: {
-            property: { select: { name: true } },
-            unit: { select: { label: true } },
-            person: { select: { firstName: true, lastName: true } },
-          },
-          take: 20,
-        }),
-      ])
-    : [[], [], [], [], []];
+  const sub = (h: SearchHit) =>
+    h.entity === "ticket" && h.status
+      ? [t(`ticketStatus.${h.status}`), h.sublabel].filter(Boolean).join(" · ")
+      : h.sublabel;
 
-  const total = properties.length + units.length + persons.length + leases.length + documents.length;
-
-  const groups = [
-    {
-      key: "properties",
-      icon: Building2,
-      items: properties.map((p) => ({ id: p.id, label: p.name, sub: `${p.zip} ${p.city}`, href: `/properties/${p.id}` })),
-    },
-    {
-      key: "units",
-      icon: DoorOpen,
-      items: units.map((u) => ({ id: u.id, label: u.label, sub: u.building.property.name, href: `/units/${u.id}` })),
-    },
-    {
-      key: "persons",
-      icon: Users,
-      items: persons.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName}`, sub: p.email ?? "", href: `/persons` })),
-    },
-    {
-      key: "leases",
-      icon: FileSignature,
-      items: leases.map((l) => ({ id: l.id, label: l.unit.label, sub: t("nav.leases"), href: `/leases/${l.id}` })),
-    },
-    {
-      key: "documents",
-      icon: FileText,
-      items: documents.map((d) => ({
-        id: d.id,
-        label: d.name,
-        sub: [d.property?.name, d.unit?.label, d.person ? `${d.person.firstName} ${d.person.lastName}` : null]
-          .filter(Boolean)
-          .join(" · "),
-        href: `/api/documents/${d.id}?inline=1`,
-        raw: true, // externer API-Pfad → normaler <a> ohne Locale-Präfix
+  const groups = GROUPS.map((g) => {
+    const found = result.groups.find((r) => r.entity === g.entity);
+    return {
+      key: g.key,
+      icon: g.icon,
+      total: found?.total ?? 0,
+      items: (found?.hits ?? []).map((h) => ({
+        id: h.id,
+        label: h.label,
+        sub: sub(h),
+        href: h.href,
+        raw: h.href.startsWith("/api/"), // externer API-Pfad → normaler <a> ohne Locale-Präfix
       })),
-    },
-  ].filter((g) => g.items.length > 0);
+    };
+  }).filter((g) => g.items.length > 0);
 
   return (
     <div className="space-y-6">
@@ -119,19 +70,19 @@ export default async function SearchPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <g.icon className="size-4" />
-                {t(`nav.${g.key}`)} ({g.items.length})
+                {t(`nav.${g.key}`)} ({g.total})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
               {g.items.map((it) => {
-                const cls = "flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted";
+                const cls = "flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted";
                 const inner = (
                   <>
                     <span className="font-medium">{it.label}</span>
-                    {it.sub && <span className="text-xs text-muted-foreground">{it.sub}</span>}
+                    {it.sub && <span className="text-right text-xs text-muted-foreground">{it.sub}</span>}
                   </>
                 );
-                return "raw" in it && it.raw ? (
+                return it.raw ? (
                   <a key={it.id} href={it.href} target="_blank" rel="noopener" className={cls}>
                     {inner}
                   </a>
@@ -141,6 +92,11 @@ export default async function SearchPage({
                   </Link>
                 );
               })}
+              {g.total > g.items.length && (
+                <p className="px-2 pt-1 text-xs text-muted-foreground">
+                  {t("search.showing", { shown: g.items.length, total: g.total })}
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}

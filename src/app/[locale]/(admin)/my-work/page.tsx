@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { usersWhoCanSee } from "@/lib/access";
 import { byUrgency, entityPath, isCollabEntity } from "@/lib/collab";
-import { intlLocale } from "@/lib/format";
+import { intlLocale, APP_TIME_ZONE } from "@/lib/format";
 import { recordLabels } from "@/server/collab-labels";
 import { setTaskDone, takeTask } from "@/server/actions/collab";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +56,7 @@ export default async function MyWorkPage() {
 
   const labels = await recordLabels(tenantId, [...mine, ...delegated, ...unassigned, ...mentions]);
   const d = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
-  const dt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+  const dt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: APP_TIME_ZONE });
 
   type Row = (typeof mine)[number];
   const recordLink = (r: { entity: string | null; entityId: string | null }) => {

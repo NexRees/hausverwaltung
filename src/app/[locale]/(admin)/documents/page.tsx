@@ -110,7 +110,7 @@ export default async function DocumentsPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("documents.category")}</label>
-          <select name="cat" defaultValue={cat} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("documents.category")} name="cat" defaultValue={cat} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             <option value="">{t("common.all")}</option>
             {CATS.map((c) => (
               <option key={c} value={c}>{t(`documentCategory.${c}`)}</option>
@@ -119,7 +119,7 @@ export default async function DocumentsPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("documents.property")}</label>
-          <select name="prop" defaultValue={propId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("documents.property")} name="prop" defaultValue={propId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             <option value="">{t("common.all")}</option>
             {propertyOpts.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -128,7 +128,7 @@ export default async function DocumentsPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("documents.unit")}</label>
-          <select name="unit" defaultValue={unitId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("documents.unit")} name="unit" defaultValue={unitId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             <option value="">{t("common.all")}</option>
             {unitOpts.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -137,7 +137,7 @@ export default async function DocumentsPage({
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">{t("documents.person")}</label>
-          <select name="person" defaultValue={personId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
+          <select aria-label={t("documents.person")} name="person" defaultValue={personId} className="flex h-9 rounded-lg border border-input bg-transparent px-3 text-sm dark:bg-input/30">
             <option value="">{t("common.all")}</option>
             {personOpts.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -221,7 +221,7 @@ export default async function DocumentsPage({
                           <Button variant="ghost" size="icon" aria-label={t("documents.download")} render={<a href={`/api/documents/${d.id}`} />}>
                             <Download className="size-4" />
                           </Button>
-                          <DeleteButton action={deleteDocument} id={d.id} />
+                          <DeleteButton action={deleteDocument} id={d.id} itemName={d.name} />
                         </div>
                       </TableCell>
                     </TableRow>
