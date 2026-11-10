@@ -12,6 +12,10 @@ describe("periodLockMessage", () => {
       "Sollstellung vom 01.01.2026 liegt im festgeschriebenen Zeitraum (bis 31.03.2026) und kann nicht mehr geändert werden. Korrekturen bitte als neue Buchung im offenen Zeitraum erfassen.",
     );
     expect(periodLockMessage(new Error("other"))).toBeNull();
+    const { PeriodLockedError } = await import("./ledger");
+    const readable = new PeriodLockedError("Zahlung vom 31.10.2026 liegt im festgeschriebenen Zeitraum");
+    expect(periodLockMessage(readable)).toBe(readable.message); // asActor's error maps to 409 too
+    expect(readable).toMatchObject({ status: 409, code: "period_locked" });
   });
 });
 

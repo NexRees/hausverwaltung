@@ -17,6 +17,7 @@ const ENTITY_DE: Record<string, string> = {
 
 /** Readable message when `e` is the period-lock refusal from the database, else null. */
 export function periodLockMessage(e: unknown): string | null {
+  if (e instanceof PeriodLockedError) return e.message; // already readable (from asActor)
   const text = e instanceof Error ? e.message : String(e ?? "");
   const m = /NEXREES_PERIOD_LOCKED: (\w+) vom ([\d.]+) liegt im festgeschriebenen Zeitraum \(bis ([\d.]+)\)/.exec(text);
   if (!m) return null;
@@ -24,7 +25,11 @@ export function periodLockMessage(e: unknown): string | null {
   return `${what} vom ${m[2]} liegt im festgeschriebenen Zeitraum (bis ${m[3]}) und kann nicht mehr geändert werden. Korrekturen bitte als neue Buchung im offenen Zeitraum erfassen.`;
 }
 
-export class PeriodLockedError extends Error {}
+/** HTTP-shaped so API error mappers answer 409 { error, code: "period_locked" }. */
+export class PeriodLockedError extends Error {
+  readonly status = 409;
+  readonly code = "period_locked";
+}
 
 /**
  * Runs `fn` in a transaction that names the acting user for the database journal. A period-lock

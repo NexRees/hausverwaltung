@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ op: str
   } catch (e) {
     if (e instanceof ApiWriteError) return Response.json({ error: e.message }, { status: e.status });
     const locked = periodLockMessage(e); // nexrees: closed booking period
-    if (locked) return Response.json({ error: locked }, { status: 409 });
+    if (locked) return Response.json({ error: locked, code: "period_locked" }, { status: 409 });
     throw e;
   }
 }
