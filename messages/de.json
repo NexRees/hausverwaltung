@@ -277,7 +277,19 @@
     "point1": "Betriebskostenabrechnung nach BetrKV & HeizkostenV",
     "point2": "WEG-Jahresabrechnung, Versammlungen & Rücklagen",
     "point3": "Mieter-/Eigentümer-Portale und KI-Assistent",
-    "demoTitle": "Demo-Zugänge"
+    "demoTitle": "Demo-Zugänge",
+    "unavailable": "Anmeldung derzeit nicht möglich. Bitte versuchen Sie es später erneut.",
+    "authError": {
+      "accessDenied": "Für dieses Konto ist kein Zugang eingerichtet. Bitte wenden Sie sich an Ihre Verwaltung.",
+      "configuration": "Die Anmeldung ist derzeit nicht möglich. Bitte versuchen Sie es später erneut.",
+      "default": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "legal": {
+    "label": "Rechtliche Hinweise",
+    "imprint": "Impressum",
+    "privacy": "Datenschutz",
+    "compliance": "DSGVO- & GoBD-orientiert"
   },
   "fields": {
     "name": "Name",

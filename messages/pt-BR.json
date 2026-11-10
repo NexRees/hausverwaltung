@@ -277,7 +277,19 @@
     "point1": "Demonstrativos de encargos por BetrKV e HeizkostenV",
     "point2": "Demonstrativos anuais de condomínio, reuniões e reservas",
     "point3": "Portais de inquilinos/proprietários e assistente de IA",
-    "demoTitle": "Acessos de demonstração"
+    "demoTitle": "Acessos de demonstração",
+    "unavailable": "No momento não é possível entrar. Tente novamente mais tarde.",
+    "authError": {
+      "accessDenied": "Nenhum acesso foi configurado para esta conta. Entre em contato com a administradora.",
+      "configuration": "No momento não é possível entrar. Tente novamente mais tarde.",
+      "default": "Não foi possível entrar. Tente novamente."
+    }
+  },
+  "legal": {
+    "label": "Informações legais",
+    "imprint": "Aviso legal",
+    "privacy": "Privacidade",
+    "compliance": "Orientado ao RGPD e à GoBD"
   },
   "fields": {
     "name": "Nome",

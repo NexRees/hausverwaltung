@@ -277,7 +277,19 @@
     "point1": "Service-charge statements per BetrKV & HeizkostenV",
     "point2": "HOA annual statements, meetings & reserves",
     "point3": "Tenant/owner portals and AI assistant",
-    "demoTitle": "Demo logins"
+    "demoTitle": "Demo logins",
+    "unavailable": "Sign-in is currently not possible. Please try again later.",
+    "authError": {
+      "accessDenied": "No access has been set up for this account. Please contact your property manager.",
+      "configuration": "Sign-in is currently not possible. Please try again later.",
+      "default": "Sign-in failed. Please try again."
+    }
+  },
+  "legal": {
+    "label": "Legal information",
+    "imprint": "Legal notice",
+    "privacy": "Privacy",
+    "compliance": "Designed with GDPR & GoBD in mind"
   },
   "fields": {
     "name": "Name",

@@ -1,7 +1,10 @@
 import type { UserRole } from "@prisma/client";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { actingTenantId } from "@/lib/acting-tenant";
+import { routing } from "@/i18n/routing";
+import { loginUrlFor, PATHNAME_HEADER } from "@/lib/safe-redirect";
 
 /** ADMIN darf alles; sonst muss die Rolle in `allowed` sein. */
 export function roleAllows(role: UserRole, allowed: UserRole[]): boolean {
@@ -21,7 +24,8 @@ export type SessionUser = {
 /** Server-Guard: liefert den User oder leitet zum Login. */
 export async function requireUser(): Promise<SessionUser> {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  // nexrees: back to the requested page after signing in (path from the middleware).
+  if (!session?.user) redirect(loginUrlFor((await headers()).get(PATHNAME_HEADER), routing.locales));
   const u = session.user;
   const tenantId = await actingTenantId(u);
   return {
