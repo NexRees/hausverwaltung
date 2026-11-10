@@ -40,7 +40,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci --legacy-peer-deps
+      # npm 11 without --legacy-peer-deps, so vitest's peer dependency vite is installed
+      # (the database tests below need it; same install as the unit tests in nexrees-e2e.yml).
+      - run: npx --yes npm@11 ci
       - run: npx prisma generate && npx prisma migrate deploy
 
       - name: Create a company like staging
