@@ -36,7 +36,7 @@ export default async function SetupPage() {
           <CardHeader className="items-center text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt={BRAND.name} className="mx-auto mb-2 h-48 w-auto object-contain drop-shadow" />
-            <CardTitle className="text-xl">{t("setup.title")}</CardTitle>
+            <CardTitle as="h1" className="text-xl">{t("setup.title")}</CardTitle>
             <CardDescription>{t("setup.subtitle")}</CardDescription>
           </CardHeader>
           <CardContent>

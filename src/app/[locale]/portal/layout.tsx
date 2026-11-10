@@ -11,6 +11,7 @@ import { InfoDrawer } from "@/components/info-drawer";
 import { BRAND } from "@/lib/brand";
 import { EnvBadge } from "@/components/env-badge";
 import { LegalFooter } from "@/components/legal-footer";
+import { SkipLink } from "@/components/skip-link";
 
 // nexrees: tenants and owners see their management company (name, logo), not the software vendor's
 // beta notice and issue tracker; the AGPL source link stays in the legal footer.
@@ -39,12 +40,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-svh flex-col bg-muted/30">
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-md bg-background px-3 py-2 text-sm font-medium shadow focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
-      >
-        {t("skipToContent")}
-      </a>
+      <SkipLink />
       {/* nexrees: the top bar stays in place while the page scrolls */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-4">
         <Link href="/portal" className="flex min-w-0 items-center gap-2 font-semibold" title={companyName}>
