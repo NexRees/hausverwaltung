@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
@@ -16,6 +17,11 @@ import { BRAND } from "@/lib/brand";
 import { envLabel } from "@/components/env-badge";
 import { PageTitle } from "@/components/page-title";
 import { SkipLink } from "@/components/skip-link";
+
+// nexrees: no metadata <title> inside the app. Next re-rendered the generic "NexRees — Hausverwaltung"
+// on every navigation, right before its route announcer read document.title, so screen readers
+// heard the same generic title on every page. PageTitle owns the tab title here instead.
+export const metadata: Metadata = { title: null };
 
 export default async function AdminLayout({
   children,

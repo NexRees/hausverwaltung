@@ -5,6 +5,14 @@ import { useTranslations } from "next-intl";
 import { RotateCcw, TriangleAlert } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { PAGE_CONTENT_ATTR, documentTitle } from "@/components/page-title";
+
+/** Outside the app shell (login, portal, unknown address) nothing else names the tab. */
+function useStandaloneTitle(title: string) {
+  useEffect(() => {
+    if (!document.querySelector(`[${PAGE_CONTENT_ATTR}]`)) document.title = documentTitle(title);
+  }, [title]);
+}
 
 /**
  * nexrees: what people (and agents) see when a page fails to render. Never shows the raw error
@@ -18,6 +26,7 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
   useEffect(() => {
     console.error(error);
   }, [error]);
+  useStandaloneTitle(t("errorTitle"));
   const digest =
     error && typeof error === "object" && "digest" in error ? String((error as { digest?: unknown }).digest ?? "") : "";
 
@@ -49,6 +58,7 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
 /** nexrees: a missing page or a deleted record, with a way back. */
 export function NotFoundState() {
   const t = useTranslations("ux");
+  useStandaloneTitle(t("notFoundTitle"));
   return (
     <div data-state="not-found" className="mx-auto flex max-w-lg flex-col items-center gap-4 py-16 text-center">
       <p aria-hidden className="font-heading text-5xl font-semibold text-muted-foreground">404</p>

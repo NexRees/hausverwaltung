@@ -5,9 +5,8 @@
 // and this component shows its text in the header instead.
 // It also keeps document.title in step ("Einheiten · NexRees"), so every page and record has its own
 // browser/tab title, agents can tell pages apart, and Next's route announcer reads the new title
-// to screen-reader users after a client-side navigation (it announces document.title on each route
-// change; without this every page had the same title and navigation was silent).
-import { useEffect, useState } from "react";
+// (below). Without this every page had the same title and navigation was silent for screen readers.
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
 import { BRAND } from "@/lib/brand";
 
@@ -26,16 +25,30 @@ export function documentTitle(pageTitle: string): string {
 export function PageTitle() {
   const pathname = usePathname();
   const [title, setTitle] = useState("");
+  const [tabTitle, setTabTitle] = useState("");
+  // Announces the new page after a client-side navigation, once its heading is there (it often
+  // streams in after the loading skeleton). Next's own route announcer is hidden in the app shell
+  // (globals.css): it reads document.title at the route change, before a streamed page has set
+  // it, so it announced the previous page's title.
+  const [announcement, setAnnouncement] = useState({ path: "", text: "" });
+  const mounted = useRef(false);
+  const announced = announcement.path === pathname ? announcement.text : "";
 
   useEffect(() => {
     const root = document.querySelector(`[${PAGE_CONTENT_ATTR}]`);
+    let pending = mounted.current; // not on the first load: screen readers read the new document
+    mounted.current = true;
     const update = () => {
       const next = readTitle();
       setTitle(next);
-      // Set synchronously (a MutationObserver callback runs before React's passive effects), so the
-      // announcer sees the new page's title in the same commit. While a loading skeleton shows
-      // (no h1 yet) the previous title stays, which the announcer does not repeat.
-      if (next) document.title = documentTitle(next);
+      if (!next) return; // loading skeleton: the tab keeps the previous title until the page is there
+      setTabTitle(next);
+      const tab = documentTitle(next);
+      if (document.title !== tab) document.title = tab;
+      if (pending) {
+        pending = false;
+        setAnnouncement({ path: pathname, text: next });
+      }
     };
     update();
     if (!root) return;
@@ -46,8 +59,15 @@ export function PageTitle() {
   }, [pathname]);
 
   return (
-    <h1 className="min-w-0 truncate text-base font-semibold tracking-tight" title={title || undefined}>
-      {title}
-    </h1>
+    <>
+      {/* React hoists this into <head>; it is also the server-rendered tab title */}
+      <title>{documentTitle(tabTitle)}</title>
+      <h1 className="min-w-0 truncate text-base font-semibold tracking-tight" title={title || undefined}>
+        {title}
+      </h1>
+      <span role="status" className="sr-only" data-route-announcement>
+        {announced}
+      </span>
+    </>
   );
 }

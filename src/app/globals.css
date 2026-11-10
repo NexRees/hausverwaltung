@@ -160,6 +160,11 @@
       animation-iteration-count: infinite !important;
     }
   }
+  /* nexrees: inside the app shell PageTitle announces page changes; Next's announcer read the tab
+     title before a streamed page had set it and so announced the previous page. */
+  body:has([data-page-content]) next-route-announcer {
+    display: none;
+  }
   /* nexrees: the page title is shown in the top bar (PageTitle), so the page's own heading is
      hidden. A static subtitle right under a page's leading heading goes too; detail pages keep
      theirs (it follows a back link there and carries data like an address or a date range). */
