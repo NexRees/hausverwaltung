@@ -1431,7 +1431,8 @@
     "filterStatus": "Status",
     "filterType": "Type",
     "filterLease": "Lease",
-    "filterDirection": "Direction"
+    "filterDirection": "Direction",
+    "markDone": "Mark “{name}” as done"
   },
   "ux": {
     "offline": "No connection to the server. Please check your connection and try again.",

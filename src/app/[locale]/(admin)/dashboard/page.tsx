@@ -10,7 +10,6 @@ import {
   CalendarClock,
   Plus,
   Lightbulb,
-  X,
   Check,
   ChevronRight,
 } from "lucide-react";
@@ -40,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { CrudDialog } from "@/components/crud-dialog";
 import { TextField } from "@/components/form-fields";
 import { createTask, toggleTask, deleteTask } from "@/server/actions/tasks";
+import { DeleteButton } from "@/components/delete-button";
 import { AiAssistant } from "@/components/ai-assistant";
 import { MonthlyBars, OccupancyDonut } from "@/components/dashboard-charts";
 import { ReminderButton } from "@/components/reminder-button";
@@ -255,16 +255,18 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-1">
                     <form action={toggleTask}>
                       <input type="hidden" name="id" value={task.id} />
-                      <Button type="submit" variant="ghost" size="icon" aria-label={t("common.save")}>
-                        <Check className="size-4" />
+                      {/* nexrees: says what it does (was "Speichern"); delete asks first and names the task */}
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t("a11y.markDone", { name: task.title })}
+                        title={t("a11y.markDone", { name: task.title })}
+                      >
+                        <Check aria-hidden className="size-4" />
                       </Button>
                     </form>
-                    <form action={deleteTask}>
-                      <input type="hidden" name="id" value={task.id} />
-                      <Button type="submit" variant="ghost" size="icon" aria-label={t("common.delete")}>
-                        <X className="size-4" />
-                      </Button>
-                    </form>
+                    <DeleteButton action={deleteTask} id={task.id} itemName={task.title} />
                   </div>
                 </div>
               ))

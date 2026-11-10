@@ -1431,7 +1431,8 @@
     "filterStatus": "Status",
     "filterType": "Tipo",
     "filterLease": "Contrato de locação",
-    "filterDirection": "Direção"
+    "filterDirection": "Direção",
+    "markDone": "Marcar “{name}” como concluída"
   },
   "ux": {
     "offline": "Sem conexão com o servidor. Verifique sua conexão e tente novamente.",

@@ -1431,7 +1431,8 @@
     "filterStatus": "Status",
     "filterType": "Art",
     "filterLease": "Mietvertrag",
-    "filterDirection": "Richtung"
+    "filterDirection": "Richtung",
+    "markDone": "„{name}“ als erledigt markieren"
   },
   "ux": {
     "offline": "Keine Verbindung zum Server. Bitte Verbindung prüfen und erneut versuchen.",
