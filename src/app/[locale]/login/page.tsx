@@ -64,12 +64,13 @@ export default async function LoginPage({
       )}
 
       {/* Brand and environment, top left (the only environment badge on this page) */}
-      <div className="nx-rise absolute left-6 top-6 flex items-center gap-3 text-white sm:left-12 sm:top-12">
+      {/* nexrees: the brand block is the page banner (all content inside landmarks) */}
+      <header className="nx-rise absolute left-6 top-6 flex items-center gap-3 text-white sm:left-12 sm:top-12">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon.png" alt="" className="size-10 rounded-xl ring-1 ring-white/20" />
         <div className="text-lg font-semibold tracking-tight">{BRAND.name}</div>
         <EnvBadge className="border-amber-300/40 bg-amber-300/15 text-amber-200 dark:text-amber-200" />
-      </div>
+      </header>
 
       <main className="flex w-full flex-1 items-center justify-center py-16">
         <div

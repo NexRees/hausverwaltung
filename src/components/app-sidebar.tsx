@@ -65,8 +65,7 @@ export function AppSidebar({
           </div>
         </div>
       </SidebarHeader>
-      {/* nexrees: the section list is the app's main navigation landmark */}
-      <SidebarContent role="navigation" aria-label={t("a11y.mainNavigation")}>
+      <SidebarContent>
         {navGroups.map((group) => {
           const isCurrent = group.labelKey === current;
           // The current section always stays open, so the page you are on is always in view.

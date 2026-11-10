@@ -267,7 +267,7 @@ export default async function WegPage({
                   <TableHead>{t("weg.scope")}</TableHead>
                   <TableHead>{t("statements.method")}</TableHead>
                   <TableHead className="text-right">{t("fields.amount")}</TableHead>
-                  <TableHead className="w-16" />
+                  <TableHead className="w-16"><span className="sr-only">{t("common.actions")}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

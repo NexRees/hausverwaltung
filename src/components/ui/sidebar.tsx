@@ -204,7 +204,10 @@ function Sidebar({
             <SheetTitle>{t("navigation")}</SheetTitle>
             <SheetDescription>{t("navigationDescription")}</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          {/* nexrees: the whole sidebar (logo, sections, account) is the main navigation landmark */}
+          <div role="navigation" aria-label={t("mainNavigation")} className="flex h-full w-full flex-col">
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     )
@@ -249,6 +252,8 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
+          role="navigation"
+          aria-label={t("mainNavigation")}
           className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
         >
           {children}

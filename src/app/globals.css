@@ -65,7 +65,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   /* nexrees: darker so destructive text on its 10% tint (badges) reaches 4.5:1 */
-  --destructive: oklch(0.55 0.23 27.325);
+  --destructive: oklch(0.51 0.21 27.325); /* nexrees: 4.5:1 also as text on its 10% tint (badges) */
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   /* nexrees: focus indicator 3:1 or better (0.708 was 2.6:1 on white) */

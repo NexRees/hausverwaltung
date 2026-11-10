@@ -171,7 +171,7 @@ export default async function StatementsPage({
                   <TableHead className="text-right">{t("statements.allocated")}</TableHead>
                   <TableHead className="text-right">{t("statements.prepayment")}</TableHead>
                   <TableHead className="text-right">{t("statements.balance")}</TableHead>
-                  {canPdf && <TableHead className="w-10" />}
+                  {canPdf && <TableHead className="w-10"><span className="sr-only">{t("common.actions")}</span></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
