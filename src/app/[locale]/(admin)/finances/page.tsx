@@ -261,12 +261,12 @@ export default async function FinancesPage({
                         <div className="flex flex-col">
                           <Link
                             href={`/units/${c.lease.unit.id}`}
-                            className="font-medium text-foreground hover:underline"
+                            className="inline-flex min-h-6 items-center font-medium text-foreground hover:underline"
                           >
                             {c.lease.unit.building.property.name} · {c.lease.unit.label}
                           </Link>
                           {c.lease.renters.length > 0 && (
-                            <Link href={`/leases/${c.leaseId}`} className="text-xs hover:underline">
+                            <Link href={`/leases/${c.leaseId}`} className="inline-flex min-h-6 items-center text-xs hover:underline">
                               {c.lease.renters.map((r) => `${r.person.firstName} ${r.person.lastName}`).join(", ")}
                             </Link>
                           )}
@@ -421,7 +421,7 @@ export default async function FinancesPage({
                             <a
                               key={d.id}
                               href={`/api/documents/${d.id}`}
-                              className="truncate text-xs hover:underline"
+                              className="block truncate text-xs leading-6 hover:underline"
                               target="_blank"
                               rel="noopener noreferrer"
                             >
