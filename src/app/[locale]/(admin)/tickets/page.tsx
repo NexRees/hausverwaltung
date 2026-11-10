@@ -1,3 +1,5 @@
+import { tokenizedWhere, SEARCH_FIELDS } from "@/lib/search";
+import type { Prisma } from "@prisma/client";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -27,7 +29,7 @@ import {
 import { Pager } from "@/components/pager";
 import { ListFilter } from "@/components/list-filter";
 import { SharedOptionsProvider } from "@/components/shared-options";
-import { listParams, listHref, pageCount, icontains } from "@/lib/list-params";
+import { listParams, listHref, pageCount } from "@/lib/list-params";
 
 export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const user = await requireUser();
@@ -40,16 +42,8 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
 
   const where = {
     tenantId,
-    ...(lp.q
-      ? {
-          OR: [
-            { title: icontains(lp.q) },
-            { description: icontains(lp.q) },
-            { property: { name: icontains(lp.q) } },
-            { unit: { label: icontains(lp.q) } },
-          ],
-        }
-      : {}),
+    // nexrees: every word must match ("Erika Mustermann", "Lindenstraße W01")
+    ...tokenizedWhere<Prisma.TicketWhereInput>(lp.q, SEARCH_FIELDS.ticket),
   };
   const [tickets, total, contractors, maintenance, properties, units, users] = await Promise.all([
     prisma.ticket.findMany({

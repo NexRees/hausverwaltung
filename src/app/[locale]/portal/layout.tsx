@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
 import { Building2 } from "lucide-react";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +20,6 @@ const PORTAL_ROLES = ["MIETER", "EIGENTUEMER", "HANDWERKER"];
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const locale = await getLocale();
-  const t = await getTranslations("portal");
   const [notifs, unread, tenant] = await Promise.all([
     prisma.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 20 }),
     prisma.notification.count({ where: { userId: user.id, read: false } }),

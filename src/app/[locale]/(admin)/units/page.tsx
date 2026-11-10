@@ -1,3 +1,5 @@
+import { tokenizedWhere } from "@/lib/search";
+import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +23,7 @@ import { deleteUnit } from "@/server/actions/objects";
 import { Pager } from "@/components/pager";
 import { ListFilter } from "@/components/list-filter";
 import { SharedOptionsProvider } from "@/components/shared-options";
-import { listParams, listHref, pageCount, icontains } from "@/lib/list-params";
+import { listParams, listHref, pageCount } from "@/lib/list-params";
 
 export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const user = await requireUser();
@@ -30,16 +32,8 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
   const lp = listParams(await searchParams);
   const where = {
     tenantId: user.tenantId,
-    ...(lp.q
-      ? {
-          OR: [
-            { label: icontains(lp.q) },
-            { building: { name: icontains(lp.q) } },
-            { building: { property: { name: icontains(lp.q) } } },
-            { leases: { some: { renters: { some: { person: { lastName: icontains(lp.q) } } } } } },
-          ],
-        }
-      : {}),
+    // nexrees: every word must match ("Erika Mustermann", "Lindenstraße W01")
+    ...tokenizedWhere<Prisma.UnitWhereInput>(lp.q, ["label", "building.name", "building.property.name", "leases.some.renters.some.person.lastName", "leases.some.renters.some.person.firstName"]),
   };
 
   const [units, total, customDefs, leaseDefs, persons, properties] = await Promise.all([
