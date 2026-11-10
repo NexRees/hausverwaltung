@@ -93,6 +93,15 @@ describe("errors", () => {
     expect(JSON.stringify(body)).not.toContain("10.0.0.5");
     spy.mockRestore();
   });
+  it("keeps a code the error carries (closed booking period)", async () => {
+    class Locked extends Error {
+      status = 409;
+      code = "period_locked";
+    }
+    const res = errorResponse(new Locked("Zahlung vom 01.09.2026 liegt im festgeschriebenen Zeitraum"));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "period_locked" });
+  });
   it("safeHandler turns throws into JSON", async () => {
     const h = safeHandler(async () => {
       throw new ApiHttpError(400, "invalid_parameter", "status: eines von A, B", { parameter: "status" });

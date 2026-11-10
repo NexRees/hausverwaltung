@@ -20,6 +20,8 @@ export class ApiWriteError extends Error {
   constructor(
     message: string,
     readonly status = 400,
+    /** Machine-readable code for `{ error, code }`; default derives from the status. */
+    readonly code?: string,
   ) {
     super(message);
   }
@@ -71,7 +73,7 @@ async function asApi(p: ApiPrincipal, fn: (tx: any) => Promise<any>): Promise<an
   try {
     return await asActor(apiActor(p), fn);
   } catch (e) {
-    if (e instanceof PeriodLockedError) throw new ApiWriteError(e.message, 409);
+    if (e instanceof PeriodLockedError) throw new ApiWriteError(e.message, 409, "period_locked");
     throw e;
   }
 }

@@ -88,7 +88,7 @@ export const OPERATIONS: Record<string, Op> = {
       const last = new Date(Date.UTC(y, m, 0));
       const due = new Date(Date.UTC(y, m - 1, 3));
       const closed = await closedPeriodProblem(p.tenantId, first, "Sollstellungslauf"); // nexrees
-      if (closed) throw new ApiWriteError(closed, 409);
+      if (closed) throw new ApiWriteError(closed, 409, "period_locked");
       const leases = await prisma.lease.findMany({
         where: { tenantId: p.tenantId, startDate: { lte: last }, OR: [{ endDate: null }, { endDate: { gte: first } }] },
         include: { components: { select: { amount: true } }, charges: { where: { period: first, type: "MIETE" }, select: { id: true } } },

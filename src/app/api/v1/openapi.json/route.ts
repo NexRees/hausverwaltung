@@ -77,7 +77,8 @@ const spec = {
             type: "string",
             description:
               "Stabiler Bezeichner, z. B. unauthorized, forbidden, not_found, unknown_entity, invalid_json, invalid_parameter, " +
-              "unsupported_parameter, validation_error, bad_request, conflict, unprocessable, internal_error",
+              "unsupported_parameter, validation_error, bad_request, conflict, period_locked (festgeschriebener Zeitraum, 409), " +
+              "unprocessable, internal_error",
           },
         },
         additionalProperties: true,
