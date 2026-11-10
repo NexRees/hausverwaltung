@@ -25,7 +25,9 @@ export function DeleteButton({
   description,
   redirectTo,
 }: {
-  action: (fd: FormData) => Promise<void>;
+  // nexrees: an action may return { error } (e.g. closed booking period); thrown messages are
+  // hidden by Next.js in production
+  action: (fd: FormData) => Promise<void | { error?: string }>;
   id: string;
   label?: string; // z. B. „Verbindung trennen“ statt „Löschen“ (#53)
   description?: string;
@@ -41,7 +43,11 @@ export function DeleteButton({
     fd.set("id", id);
     start(async () => {
       try {
-        await action(fd);
+        const res = await action(fd);
+        if (res && res.error) {
+          toast.error(res.error);
+          return;
+        }
         setOpen(false);
         toast.success(t("deleted"));
         if (redirectTo) router.push(redirectTo);

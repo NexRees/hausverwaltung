@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { openCharges } from "@/server/charge-ledger";
 import { requireUser } from "@/lib/rbac";
 import { isStaffRole } from "@/lib/staff-access";
-import { isAiConfigured, askAssistant } from "@/lib/ai";
+import { isAiConfigured, askAssistant, aiSourceLabel } from "@/lib/ai";
 import { computeStatement } from "@/server/statements";
 import { money } from "@/lib/format";
 
-export type AssistantState = { answer?: string; configured?: boolean; error?: string };
+// nexrees: `source` labels machine-generated text (EU AI Act Art. 50) with provider and model.
+export type AssistantState = { answer?: string; configured?: boolean; error?: string; source?: string };
 
 /** Baut einen kompakten Bestands-Kontext (nur Kennzahlen, keine PII) für den Assistenten. */
 async function buildContext(tenantId: string) {
@@ -72,7 +73,7 @@ export async function askAssistantAction(_prev: AssistantState, fd: FormData): P
   if (!configured) {
     // Regelbasierter Fallback ohne LLM: fasst die Kennzahlen zusammen.
     const answer =
-      `KI-Assistent nicht konfiguriert (ANTHROPIC_API_KEY fehlt). Kennzahlen zum Bestand:\n` +
+      `KI-Assistent nicht konfiguriert. Kennzahlen zum Bestand:\n` +
       `• ${ctx.objekte} Objekte, ${ctx.einheiten} Einheiten (${ctx.vermietet} vermietet, ${ctx.leerstand} leer)\n` +
       `• Sollmiete/Monat: ${ctx.sollmieteMonatlich} €\n` +
       `• Offene Posten: ${ctx.offenePostenSumme} € (${ctx.ueberfaelligeForderungen} überfällig)\n` +
@@ -82,7 +83,7 @@ export async function askAssistantAction(_prev: AssistantState, fd: FormData): P
 
   try {
     const answer = await askAssistant(JSON.stringify(ctx), question, aiCfg);
-    return { answer, configured: true };
+    return { answer, configured: true, source: aiSourceLabel(aiCfg) };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "KI-Anfrage fehlgeschlagen", configured: true };
   }
@@ -110,7 +111,7 @@ export async function explainStatement(_p: AssistantState, fd: FormData): Promis
 
   if (!isAiConfigured(aiCfg)) {
     const answer =
-      `KI-Assistent nicht konfiguriert (ANTHROPIC_API_KEY fehlt). Kurzfassung der Abrechnung ${year}:\n` +
+      `KI-Assistent nicht konfiguriert. Kurzfassung der Abrechnung ${year}:\n` +
       `• Objekt: ${ctx.objekt}\n` +
       `• Umlagefähige Kosten gesamt: ${money(st.totalUmlage)}\n` +
       st.units.map((u) => `• ${u.label}: umgelegt ${money(u.allocated)}, VZ ${money(u.prepayment)}, Saldo ${money(u.balance)} ${u.balance >= 0 ? "(Guthaben)" : "(Nachzahlung)"}`).join("\n");
@@ -122,7 +123,7 @@ export async function explainStatement(_p: AssistantState, fd: FormData): Promis
       "Erkläre diese Betriebskostenabrechnung einem Mieter in einfachen, freundlichen Worten: was wurde nach welchem Schlüssel umgelegt, und wie kommt der Saldo je Einheit zustande. Kurz und verständlich.",
       aiCfg,
     );
-    return { answer, configured: true };
+    return { answer, configured: true, source: aiSourceLabel(aiCfg) };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "KI-Anfrage fehlgeschlagen", configured: true };
   }

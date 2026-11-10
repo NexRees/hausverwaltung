@@ -13,6 +13,7 @@ export async function audit(
   entity: string,
   entityId?: string | null,
   summary?: string,
+  source?: string, // nexrees: "ui" (default), "api:<token>", ...
 ): Promise<void> {
   try {
     await prisma.auditLog.create({
@@ -24,6 +25,7 @@ export async function audit(
         entity,
         entityId: entityId ?? null,
         summary: summary ?? null,
+        source: source ?? "ui",
       },
     });
   } catch {

@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { routing } from "@/i18n/routing";
 import { normalizePostalAddress, postalAddressError } from "@/lib/postal-address";
+import { passwordProblem } from "@/lib/password-policy";
+import { ibanValid, normalizeIban, mandateRefValid } from "@/lib/sepa-validate";
+
+// nexrees: zod adapter for the shared password policy
+function passwordRule(v: string, ctx: z.RefinementCtx) {
+  const problem = passwordProblem(v);
+  if (problem) ctx.addIssue({ code: "custom", message: problem });
+}
 
 // notice: Ergebnis des Postausgangs (#79) für die Rückmeldung im Dialog
 export type ActionState = { ok?: boolean; error?: string; notice?: "sent" | "queued" | "draft" | "failed" };
@@ -205,11 +213,21 @@ export const paymentSchema = z.object({
   reference: optionalStr,
 });
 
+// nexrees: IBAN checksum, mandate reference charset/length (max. 35), signature not in the future
 export const mandateSchema = z.object({
   personId: z.string().min(1),
-  iban: z.string().trim().min(1),
-  mandateRef: z.string().trim().min(1),
-  signedDate: z.coerce.date(),
+  iban: z
+    .string()
+    .trim()
+    .transform(normalizeIban)
+    .refine(ibanValid, "IBAN ist ungültig (Prüfziffer)"),
+  mandateRef: z
+    .string()
+    .trim()
+    .min(1)
+    .max(35, "Mandatsreferenz: höchstens 35 Zeichen")
+    .refine(mandateRefValid, "Mandatsreferenz: nur A–Z, 0–9 und + ? / - : ( ) . , ' ohne Leerzeichen; kein / am Anfang oder Ende, kein //"),
+  signedDate: z.coerce.date().refine((d) => d.getTime() <= Date.now() + 86_400_000, "Unterschriftsdatum liegt in der Zukunft"),
 });
 
 // month als "YYYY-MM"
@@ -313,7 +331,7 @@ export const setupSchema = z.object({
   tenantName: z.string().trim().min(1),
   name: z.string().trim().min(1),
   email: z.string().trim().email(),
-  password: z.string().min(6),
+  password: z.string().superRefine(passwordRule), // nexrees: shared password policy
   locale: z.enum(routing.locales),
   brandColor: optionalStr,
   // optionales erstes Objekt
@@ -398,7 +416,7 @@ const roleEnum = z.enum(["ADMIN", "VERWALTER", "BUCHHALTUNG", "BEIRAT", "EIGENTU
 export const userCreateSchema = z.object({
   name: z.string().trim().min(1),
   email: z.string().trim().email(),
-  password: z.string().min(6),
+  password: z.string().superRefine(passwordRule), // nexrees: shared password policy
   role: roleEnum,
   personId: optionalStr,
 });

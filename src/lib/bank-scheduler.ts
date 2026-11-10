@@ -29,6 +29,7 @@ async function tick() {
       if ("error" in res) console.warn(`[bank] Auto-Sync Mandant ${c.tenantId}: ${res.error}`);
       else {
         if (res.imported) console.log(`[bank] Mandant ${c.tenantId}: ${res.imported} Buchungen, ${res.matched} zugeordnet`);
+        if (res.skippedLocked) console.warn(`[bank] Mandant ${c.tenantId}: ${res.skippedLocked} Buchungen im festgeschriebenen Zeitraum (bis ${res.lockedUntil}) nicht übernommen`);
         if (res.failed.length) console.warn(`[bank] Mandant ${c.tenantId}: ${res.failed.join("; ")}`);
       }
     }

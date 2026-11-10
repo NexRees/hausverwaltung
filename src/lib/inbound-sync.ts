@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchInbox, isImapConfigured, type FetchedMail } from "@/lib/adapters/imap";
 import { dedupKey, matchPersonId, clampAttachMaxMb, isReplySubject, normalizeSubject, threadKey } from "@/lib/inbound";
 import { saveFile } from "@/lib/storage";
+import { openSecret } from "@/lib/crypto";
 
 export type InboundSyncResult = { imported: number; matched: number } | { error: string };
 
@@ -60,7 +61,7 @@ export async function syncTenantInbox(tenantId: string): Promise<InboundSyncResu
   });
   const cfg = {
     host: tenant?.imapHost, port: tenant?.imapPort, user: tenant?.imapUser,
-    password: tenant?.imapPassword, secure: tenant?.imapSecure, mailbox: tenant?.imapMailbox,
+    password: openSecret(tenant?.imapPassword), secure: tenant?.imapSecure, mailbox: tenant?.imapMailbox,
   };
   if (!isImapConfigured(cfg)) return { error: "Kein IMAP-Postfach konfiguriert (Einstellungen → E-Mail)." };
 

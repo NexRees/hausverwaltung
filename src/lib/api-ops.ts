@@ -1,13 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { roleAllows, WRITE_ROLES } from "@/lib/rbac";
 import type { ApiPrincipal } from "@/lib/api-auth";
-import { ApiWriteError } from "@/lib/api-write";
+import { ApiWriteError, apiSource } from "@/lib/api-write";
+import { importCamtEntries, camtSummary } from "@/lib/bank-import";
+import { closedPeriodProblem } from "@/server/ledger";
 import { saveFile } from "@/lib/storage";
 import { deliverEmail } from "@/server/outbox";
 import { parseCamt053 } from "@/lib/adapters/bankImport";
 import { isEInvoice, parseEInvoice } from "@/lib/adapters/erechnung";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limit";
-import { openCharges } from "@/server/charge-ledger";
+import { encryptSecret } from "@/lib/crypto";
+import { aiResidencyProblem } from "@/lib/ai";
 
 // Dedizierte Operationen (kein reines CRUD) für REST-API + MCP.
 // Fachlogik gespiegelt aus den Server Actions, aber Bearer-Auth statt Session.
@@ -84,6 +87,8 @@ export const OPERATIONS: Record<string, Op> = {
       const first = new Date(Date.UTC(y, m - 1, 1));
       const last = new Date(Date.UTC(y, m, 0));
       const due = new Date(Date.UTC(y, m - 1, 3));
+      const closed = await closedPeriodProblem(p.tenantId, first, "Sollstellungslauf"); // nexrees
+      if (closed) throw new ApiWriteError(closed, 409);
       const leases = await prisma.lease.findMany({
         where: { tenantId: p.tenantId, startDate: { lte: last }, OR: [{ endDate: null }, { endDate: { gte: first } }] },
         include: { components: { select: { amount: true } }, charges: { where: { period: first, type: "MIETE" }, select: { id: true } } },
@@ -203,18 +208,9 @@ export const OPERATIONS: Record<string, Op> = {
         throw new ApiWriteError("camt.053 konnte nicht gelesen werden", 400);
       }
       if (entries.length === 0) throw new ApiWriteError("Keine Buchungen in der Datei", 400);
-      // nexrees: open charges only (oldest first), computed in Postgres
-      const openMap = (await openCharges(p.tenantId)).map((c) => ({ id: c.id, open: c.open }));
-      let matched = 0;
-      for (const e of entries) {
-        let chargeId: string | null = null;
-        if (e.direction === "EINGANG") {
-          const hit = openMap.find((o) => o.open > 0 && Math.abs(o.open - e.amount) < 0.005);
-          if (hit) { chargeId = hit.id; hit.open = 0; matched++; }
-        }
-        await prisma.payment.create({ data: { tenantId: p.tenantId, accountId, chargeId, date: new Date(e.date), amount: e.amount, direction: e.direction, reference: e.reference, counterparty: e.counterparty, counterpartyIban: e.counterpartyIban } });
-      }
-      return { imported: entries.length, matched };
+      // nexrees: one transaction, dedup, entries in the closed period reported (skippedLocked)
+      const res = await importCamtEntries(p.tenantId, accountId, entries, { id: p.userId, name: p.name ?? null, source: apiSource(p) });
+      return { ...res, summary: camtSummary(res) };
     },
   },
 
@@ -282,13 +278,16 @@ export const OPERATIONS: Record<string, Op> = {
   },
 
   update_ai_config: {
-    description: "KI-Konfiguration des Mandanten setzen (nur Admin). provider anthropic|openai, baseUrl/model optional, apiKey nur senden zum Ändern.",
-    params: { provider: "anthropic|openai", baseUrl: "optional", model: "optional", apiKey: "optional (nur zum Ändern)" },
+    description: "KI-Konfiguration des Mandanten setzen (nur Admin). provider anthropic|openai|bedrock, baseUrl/model optional, apiKey nur senden zum Ändern. Mit Datenhaltungs-Vorgabe (DATA_RESIDENCY) werden Endpunkte außerhalb der Region abgelehnt.",
+    params: { provider: "anthropic|openai|bedrock", baseUrl: "optional", model: "optional", apiKey: "optional (nur zum Ändern)" },
     adminOnly: true,
     run: async (p, a) => {
+      // nexrees: residency guard + key encrypted at rest (same as the settings form)
+      const problem = aiResidencyProblem({ provider: s(a.provider), baseUrl: s(a.baseUrl), model: s(a.model) });
+      if (problem) throw new ApiWriteError(problem, 400);
       await prisma.tenant.update({
         where: { id: p.tenantId },
-        data: { aiProvider: s(a.provider) ?? null, aiBaseUrl: s(a.baseUrl) ?? null, aiModel: s(a.model) ?? null, ...(s(a.apiKey) ? { aiApiKey: s(a.apiKey) } : {}) },
+        data: { aiProvider: s(a.provider) ?? null, aiBaseUrl: s(a.baseUrl) ?? null, aiModel: s(a.model) ?? null, ...(s(a.apiKey) ? { aiApiKey: encryptSecret(s(a.apiKey)!) } : {}) },
       });
       return { ok: true };
     },
@@ -303,7 +302,7 @@ export const OPERATIONS: Record<string, Op> = {
         where: { id: p.tenantId },
         data: {
           smtpHost: s(a.host) ?? null, smtpPort: a.port != null ? Number(a.port) : null, smtpUser: s(a.user) ?? null,
-          smtpFrom: s(a.from) ?? null, smtpSecure: String(a.secure) === "true", ...(s(a.password) ? { smtpPassword: s(a.password) } : {}),
+          smtpFrom: s(a.from) ?? null, smtpSecure: String(a.secure) === "true", ...(s(a.password) ? { smtpPassword: encryptSecret(s(a.password)!) } : {}),
         },
       });
       return { ok: true };

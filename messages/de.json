@@ -213,7 +213,7 @@
     "tenantName": "Name der Hausverwaltung",
     "tenantNamePlaceholder": "z. B. Muster Hausverwaltung GmbH",
     "adminName": "Ihr Name",
-    "passwordHint": "Mindestens 6 Zeichen.",
+    "passwordHint": "Mindestens 12 Zeichen.",
     "brandColor": "Theme-Farbe",
     "preview": "Vorschau",
     "submit": "Einrichtung abschließen",
@@ -1375,5 +1375,38 @@
     "empty": "Noch keine Aufgaben, Kommentare oder Änderungen.",
     "taskCreated": "Aufgabe „{title}“ von {by} an {to}",
     "taskDone": "Aufgabe „{title}“ erledigt ({name})"
+  },
+  "nexrees": {
+    "statementLate": {
+      "confirm": "Die Abrechnungsfrist für {year} ist am {deadline} abgelaufen (§ 556 Abs. 3 BGB). Nachzahlungen dürfen nur gebucht werden, wenn die Abrechnung den Mietern rechtzeitig zugegangen ist (bei Gewerberaum gilt die Frist nicht). Bestätigen Sie den rechtzeitigen Zugang?"
+    },
+    "sepa": {
+      "date": "Einzugsdatum",
+      "create": "SEPA-Lastschrift erstellen",
+      "hint": "Eingezogen werden die offenen Sollstellungen der 35 Tage bis zum Einzugsdatum (ohne Mahnung), abzüglich Guthaben. Jede Sollstellung kommt nur in eine Datei. Vorabankündigung an die Mieter nicht vergessen.",
+      "created": "Lastschriftdatei erstellt",
+      "line": "Einzug {date} · {count} Einzüge · {total}",
+      "cancel": "Datei stornieren",
+      "cancelDesc": "Nur stornieren, wenn die Datei nicht bei der Bank eingereicht wurde. Danach können die Sollstellungen erneut eingezogen werden.",
+      "cancelled": "storniert"
+    },
+    "bookkeeping": {
+      "tab": "Buchhaltung",
+      "lockTitle": "Festschreibung (GoBD)",
+      "lockHint": "Gesperrt werden ganze Monate bis einschließlich des gewählten Monats: Sollstellungen, Zahlungen und Rücklagenbuchungen können dann weder angelegt noch geändert oder gelöscht werden, auch nicht über die API oder den Bank-Abruf. Korrekturen erfolgen als neue Buchung im offenen Zeitraum. Das lässt sich nicht rückgängig machen.",
+      "lockedUntil": "Festgeschrieben bis",
+      "notLocked": "Noch nichts festgeschrieben.",
+      "lockUntil": "Festschreiben bis einschließlich Monat",
+      "lockButton": "Festschreiben",
+      "lockConfirm": "Zeitraum endgültig festschreiben? Das kann nicht rückgängig gemacht werden.",
+      "locked": "Festgeschrieben",
+      "sepaTitle": "SEPA-Lastschrift",
+      "sepaHint": "Gläubiger-Identifikationsnummer (Deutsche Bundesbank) und das Konto, auf das eingezogen wird. Ohne gültige Angaben wird keine Lastschriftdatei erstellt.",
+      "creditorId": "Gläubiger-ID",
+      "creditorIban": "IBAN des Gläubigerkontos",
+      "creditorBic": "BIC (optional)",
+      "save": "Speichern",
+      "saved": "Gespeichert"
+    }
   }
 }

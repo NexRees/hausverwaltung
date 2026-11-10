@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
+import { bookAs } from "@/server/ledger";
+import { depositCapFor } from "@/lib/deposit";
 import { pickCustom } from "@/lib/custom";
 import {
   leaseCreateSchema,
@@ -73,10 +75,18 @@ export async function updateLease(_p: ActionState, fd: FormData): Promise<Action
   return done();
 }
 
-export async function deleteLease(fd: FormData): Promise<void> {
+// nexrees: cascades into booked rows; refused with a message when they are in a closed period
+export async function deleteLease(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.lease.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.lease.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
+}
+
+// nexrees: § 551 Abs. 1 BGB cap for residential deposits
+async function depositCap(tenantId: string, leaseId: string, amount: number) {
+  return depositCapFor(prisma, tenantId, leaseId, amount);
 }
 
 // --- Renter (Mitmieter) ---
@@ -154,18 +164,26 @@ export async function upsertDeposit(_p: ActionState, fd: FormData): Promise<Acti
   const r = depositSchema.safeParse(Object.fromEntries(fd));
   if (!r.success) return fail(r.error.issues[0]?.message);
   if (!(await assertLease(user.tenantId, r.data.leaseId))) return fail("Vertrag nicht gefunden");
+  const capProblem = await depositCap(user.tenantId, r.data.leaseId, Number(r.data.amount)); // nexrees: § 551 BGB
+  if (capProblem) return fail(capProblem);
   const { leaseId, accountId, ...rest } = r.data;
   const data = { ...rest, accountId: accountId || null };
-  await prisma.deposit.upsert({
-    where: { leaseId },
-    create: { ...data, leaseId, tenantId: user.tenantId },
-    update: data,
-  });
-  return done();
+  // nexrees: journaled with the acting user
+  const locked = await bookAs(user, (tx) =>
+    tx.deposit.upsert({
+      where: { leaseId },
+      create: { ...data, leaseId, tenantId: user.tenantId },
+      update: data,
+    }),
+  );
+  return locked ?? done();
 }
 
-export async function deleteDeposit(fd: FormData): Promise<void> {
+// nexrees: journaled with the acting user (the database keeps the deleted record)
+export async function deleteDeposit(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.deposit.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.deposit.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }

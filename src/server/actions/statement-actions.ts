@@ -10,6 +10,8 @@ import { computeStatement } from "@/server/statements";
 import { statementPdfFor } from "@/server/statement-letter";
 import { queueEmails } from "@/server/outbox";
 import type { ActionState } from "@/lib/schemas";
+import { bookAs } from "@/server/ledger";
+import { backPaymentExcluded } from "@/lib/betrkv";
 
 function parse(fd: FormData) {
   return { propertyId: String(fd.get("propertyId") ?? ""), year: Number(fd.get("year")) || new Date().getFullYear() };
@@ -20,9 +22,22 @@ export async function bookStatementCharges(_p: ActionState, fd: FormData): Promi
   const user = await requireWriter();
   const { propertyId, year } = parse(fd);
   if (!propertyId) return { error: "Kein Objekt" };
+  // nexrees: § 556 Abs. 3 BGB: after the twelve-month deadline a back payment can only be claimed
+  // when the statement reached the tenant in time (or for commercial space, where § 556 does not
+  // apply). The software does not know the delivery date, so the user has to confirm it.
+  const late = backPaymentExcluded(year, new Date());
+  if (late && fd.get("confirmTimely") !== "1") {
+    return {
+      error: `Die Abrechnungsfrist für ${year} endete am 31.12.${year + 1} (§ 556 Abs. 3 BGB). Nachzahlungen nur buchen, wenn die Abrechnung den Mietern rechtzeitig zugegangen ist; sonst sind sie ausgeschlossen, Guthaben sind auszuzahlen.`,
+    };
+  }
 
   const st = await computeStatement(user.tenantId, propertyId, year);
   const desc = `NK-Nachzahlung ${year}`;
+  // nexrees: the claim arises when the statement is issued, so it is booked in the current month
+  // (and stays bookable after the statement year has been closed).
+  const now = new Date();
+  const period = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const dueDate = new Date(Date.now() + 30 * 864e5);
   let created = 0;
 
@@ -34,20 +49,26 @@ export async function bookStatementCharges(_p: ActionState, fd: FormData): Promi
       select: { id: true },
     });
     if (exists) continue;
-    await prisma.charge.create({
-      data: {
-        tenantId: user.tenantId,
-        leaseId: u.leaseId,
-        type: "NEBENKOSTEN",
-        period: new Date(Date.UTC(year, 11, 1)),
-        dueDate,
-        amount: Math.abs(u.balance),
-        description: desc,
-      },
-    });
+    const locked = await bookAs(user, (tx) =>
+      tx.charge.create({
+        data: {
+          tenantId: user.tenantId,
+          leaseId: u.leaseId!,
+          type: "NEBENKOSTEN",
+          period,
+          dueDate,
+          amount: Math.abs(u.balance),
+          description: desc,
+        },
+      }),
+    );
+    if (locked) return locked;
     created++;
   }
-  if (created > 0) await audit(user, "CREATE", "Charge", null, `${created}× ${desc}`);
+  if (created > 0) {
+    const note = late ? " (nach Fristablauf § 556 Abs. 3 BGB; rechtzeitiger Zugang vom Nutzer bestätigt)" : "";
+    await audit(user, "CREATE", "Charge", null, `${created}× ${desc}${note}`);
+  }
   revalidatePath("/", "layout");
   return created > 0 ? { ok: true } : { error: "Keine offenen Nachzahlungen zu buchen." };
 }

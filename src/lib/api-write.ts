@@ -5,6 +5,9 @@ import type { ApiPrincipal } from "@/lib/api-auth";
 import * as S from "@/lib/schemas";
 import { deleteFile } from "@/lib/storage";
 import { audit } from "@/lib/audit";
+import { depositCapFor } from "@/lib/deposit";
+import { costEntryProblem } from "@/lib/betrkv";
+import { asActor, PeriodLockedError, type Actor } from "@/server/ledger";
 
 // Generische, mandanten-gescopte Schreibschicht für REST-API + MCP.
 // Nutzt dieselben zod-Schemas wie die Server Actions (Feld-Whitelist, Enums,
@@ -56,6 +59,24 @@ export function documentPatch(body: Record<string, unknown>) {
   if (!Object.keys(data).length) throw new ApiWriteError("Keine änderbaren Felder (name, category, propertyId, unitId, personId)", 400);
   return data;
 }
+
+// nexrees: every generic API/MCP write runs as the token's user with source "api:<token name>", so
+// the database journal and the audit log name the integration or agent that made the change.
+export const apiSource = (p: ApiPrincipal) => `api:${p.tokenName ?? p.tokenId ?? "token"}`;
+const apiActor = (p: ApiPrincipal): Actor => ({ id: p.userId, name: p.name, source: apiSource(p) });
+
+/* eslint-disable @typescript-eslint/no-explicit-any -- dynamic Prisma delegates, like `db` below */
+async function asApi(p: ApiPrincipal, fn: (tx: any) => Promise<any>): Promise<any> {
+  try {
+    return await asActor(apiActor(p), fn);
+  } catch (e) {
+    if (e instanceof PeriodLockedError) throw new ApiWriteError(e.message, 409);
+    throw e;
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+const modelName = (delegate: string) => delegate[0].toUpperCase() + delegate.slice(1); // same as the DB journal
 
 const actorOf = (p: ApiPrincipal): SessionUser => ({ id: p.userId, tenantId: p.tenantId, homeTenantId: p.tenantId, superAdmin: false, role: p.role, name: p.name });
 
@@ -176,7 +197,18 @@ export async function apiCreate(p: ApiPrincipal, entity: string, body: Record<st
     const created = await db.user.create({
       data: { tenantId, name, email, role, personId: personId ?? null, passwordHash: await bcrypt.hash(password, 10) },
     });
+    await audit(actorOf(p), "CREATE", "User", created.id, `${apiSource(p)}: ${email} (${role})`, apiSource(p)); // nexrees
     return { id: created.id };
+  }
+
+  if (def.model === "costEntry") {
+    const rule = costEntryProblem(data as { type: string; umlagefaehig: boolean; consumptionSharePct?: number }); // nexrees
+    if (rule) throw new ApiWriteError(rule, 422);
+  }
+  if (def.model === "deposit") {
+    // nexrees: § 551 Abs. 1 BGB cap, same as the form
+    const capProblem = await depositCapFor(db, tenantId, String(data.leaseId), Number(data.amount));
+    if (capProblem) throw new ApiWriteError(capProblem, 422);
   }
 
   if (def.upsertBy) {
@@ -184,11 +216,14 @@ export async function apiCreate(p: ApiPrincipal, entity: string, body: Record<st
     const whereKey = def.upsertBy.length > 1 ? { [def.upsertBy.join("_")]: where } : where;
     const { ...updateData } = data;
     for (const k of def.upsertBy) delete updateData[k];
-    const row = await db[def.model].upsert({
-      where: whereKey,
-      create: { ...data, tenantId, ...(customData ? { custom: customData } : {}) },
-      update: updateData,
-    });
+    const row = await asApi(p, (tx) =>
+      tx[def.model].upsert({
+        where: whereKey,
+        create: { ...data, tenantId, ...(customData ? { custom: customData } : {}) },
+        update: updateData,
+      }),
+    );
+    await audit(actorOf(p), "UPDATE", modelName(def.model), row.id, `${apiSource(p)}: upsert`, apiSource(p));
     return { id: row.id };
   }
 
@@ -197,22 +232,26 @@ export async function apiCreate(p: ApiPrincipal, entity: string, body: Record<st
     const row = await db.lease.create({
       data: { ...rest, tenantId, unitId, ...(customData ? { custom: customData } : {}), renters: { create: { tenantId, personId } } },
     });
+    await audit(actorOf(p), "CREATE", "Lease", row.id, `${apiSource(p)}: ${Object.keys(data).join(", ")}`, apiSource(p)); // nexrees
     return { id: row.id };
   }
 
   if (def.special === "resolution") {
     const last = await db.resolution.findFirst({ where: { propertyId: data.propertyId, tenantId }, orderBy: { number: "desc" }, select: { number: true } });
     const row = await db.resolution.create({ data: { ...data, tenantId, number: (last?.number ?? 0) + 1 } });
+    await audit(actorOf(p), "CREATE", "Resolution", row.id, `${apiSource(p)}: Nr. ${row.number}`, apiSource(p)); // nexrees
     return { id: row.id };
   }
 
   if (def.special === "agenda") {
     const count = await db.agendaItem.count({ where: { meetingId: data.meetingId } });
     const row = await db.agendaItem.create({ data: { ...data, tenantId, position: count + 1 } });
+    await audit(actorOf(p), "CREATE", "AgendaItem", row.id, `${apiSource(p)}: TOP ${row.position}`, apiSource(p)); // nexrees
     return { id: row.id };
   }
 
-  const row = await db[def.model].create({ data: { ...data, tenantId, ...(customData ? { custom: customData } : {}) } });
+  const row = await asApi(p, (tx) => tx[def.model].create({ data: { ...data, tenantId, ...(customData ? { custom: customData } : {}) } }));
+  await audit(actorOf(p), "CREATE", modelName(def.model), row.id, `${apiSource(p)}: ${Object.keys(data).join(", ")}`, apiSource(p));
   return { id: row.id };
 }
 
@@ -226,17 +265,20 @@ export async function apiUpdate(p: ApiPrincipal, entity: string, id: string, bod
     await checkRelations(p.tenantId, def.relations, data);
     const res = await db.document.updateMany({ where: { id, tenantId: p.tenantId }, data });
     if (res.count === 0) throw new ApiWriteError("Nicht gefunden", 404);
-    await audit(actorOf(p), "UPDATE", "Document", id, `API: ${Object.keys(data).join(", ")}`);
+    await audit(actorOf(p), "UPDATE", "Document", id, `${apiSource(p)}: ${Object.keys(data).join(", ")}`, apiSource(p));
     return { id, updated: res.count };
   }
   const { out, customData } = normalize(body, !!def.custom);
   const data = parse(def.update, out);
   await checkRelations(p.tenantId, def.relations, data);
-  const res = await db[def.model].updateMany({
-    where: { id, tenantId: p.tenantId },
-    data: { ...data, ...(customData ? { custom: customData } : {}) },
-  });
+  const res = await asApi(p, (tx) =>
+    tx[def.model].updateMany({
+      where: { id, tenantId: p.tenantId },
+      data: { ...data, ...(customData ? { custom: customData } : {}) },
+    }),
+  );
   if (res.count === 0) throw new ApiWriteError("Nicht gefunden", 404);
+  await audit(actorOf(p), "UPDATE", modelName(def.model), id, `${apiSource(p)}: ${Object.keys(data).join(", ")}`, apiSource(p));
   return { id, updated: res.count };
 }
 
@@ -251,6 +293,7 @@ export async function apiDelete(p: ApiPrincipal, entity: string, id: string) {
     const actor: SessionUser = { id: p.userId, tenantId: p.tenantId, homeTenantId: p.tenantId, superAdmin: false, role: p.role };
     if (!canDeleteUser(actor, target.role, target.id)) throw new ApiWriteError("Löschen nicht erlaubt", 403);
     await db.user.delete({ where: { id: target.id } });
+    await audit(actorOf(p), "DELETE", "User", id, apiSource(p), apiSource(p)); // nexrees
     return { id, deleted: 1 };
   }
 
@@ -260,11 +303,12 @@ export async function apiDelete(p: ApiPrincipal, entity: string, id: string) {
     if (!doc) throw new ApiWriteError("Nicht gefunden", 404);
     await deleteFile(doc.storageKey);
     await db.document.delete({ where: { id: doc.id } });
-    await audit(actorOf(p), "DELETE", "Document", id, `API: ${doc.name}`);
+    await audit(actorOf(p), "DELETE", "Document", id, `${apiSource(p)}: ${doc.name}`, apiSource(p));
     return { id, deleted: 1 };
   }
 
-  const res = await db[def.model].deleteMany({ where: { id, tenantId: p.tenantId } });
+  const res = await asApi(p, (tx) => tx[def.model].deleteMany({ where: { id, tenantId: p.tenantId } }));
   if (res.count === 0) throw new ApiWriteError("Nicht gefunden", 404);
+  await audit(actorOf(p), "DELETE", modelName(def.model), id, apiSource(p), apiSource(p));
   return { id, deleted: res.count };
 }
