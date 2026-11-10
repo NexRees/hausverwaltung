@@ -91,9 +91,10 @@ describe("NexRees branding survives upstream merges", () => {
 
   it("links users to the source of the exact running version (AGPL § 13)", () => {
     expect(BRAND.name).toBe("NexRees");
-    expect(BRAND.sourceUrl).toMatch(/^https:\/\/github\.com\/NexRees\//);
-    expect(sourceUrlFor("cb13079")).toBe(`${BRAND.sourceUrl}/tree/cb13079`);
-    expect(sourceUrlFor("")).toBe(BRAND.sourceUrl);
-    expect(sourceUrlFor("main; rm -rf")).toBe(BRAND.sourceUrl);
+    // Private repository: the running build's source is downloaded from the app itself.
+    expect(BRAND.sourceUrl).toBe("/api/source");
+    expect(sourceUrlFor("cb13079")).toBe("/api/source");
+    expect(sourceUrlFor("")).toBe("/api/source");
+    expect(read("src/app/api/source/route.ts").toString()).toContain("session?.user");
   });
 });

@@ -1,0 +1,39 @@
+# nexrees: report how much of the code is still HaVeWa, per area (scripts/nexrees/upstream-share.mjs).
+# NexRees replaces HaVeWa area by area; the share should only go down. A pull request that raises
+# it gets a warning, not a failure (a HaVeWa security fix may add a few lines on purpose).
+name: HaVeWa share
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Report
+        run: node scripts/nexrees/upstream-share.mjs >> "$GITHUB_STEP_SUMMARY"
+      - name: Compare with the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          now=$(node scripts/nexrees/upstream-share.mjs --json | jq .share)
+          git worktree add -q /tmp/base "$BASE"
+          if [ -f /tmp/base/scripts/nexrees/upstream-share.mjs ]; then
+            before=$(cd /tmp/base && node scripts/nexrees/upstream-share.mjs --json | jq .share)
+            echo "HaVeWa share: base $before %, this pull request $now %"
+            if awk -v a="$now" -v b="$before" 'BEGIN{exit !(a > b + 0.05)}'; then
+              echo "::warning::This pull request raises the HaVeWa share from $before % to $now %."
+            fi
+          fi

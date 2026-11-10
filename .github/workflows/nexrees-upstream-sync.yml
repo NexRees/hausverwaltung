@@ -11,11 +11,13 @@
 # Needs secret UPSTREAM_SYNC_TOKEN: a fine-grained token for NexRees/hausverwaltung with
 # Contents, Pull requests, Actions and Workflows = read/write. The built-in token may not
 # push commits that touch workflow files, which every HaVeWa merge does.
+#
+# 2026-11-10 (Abi): NexRees replaces HaVeWa area by area, so new HaVeWa features are no longer
+# merged. The daily schedule is off; run it by hand only to pick up a HaVeWa security fix, and
+# never with auto-merge.
 name: Upstream sync
 
 on:
-  schedule:
-    - cron: "17 5 * * *"
   workflow_dispatch:
 
 permissions:

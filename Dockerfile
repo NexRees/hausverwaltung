@@ -16,6 +16,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npx prisma generate && npm run build
+# nexrees: AGPL § 13 source archive of this commit (made by CI with git archive), served to
+# signed-in users at /api/source. Local builds without it serve a notice instead.
+RUN mkdir -p source && if [ -f source.tar.gz ]; then mv source.tar.gz source/; fi
 
 # --- Runtime ---
 FROM base AS runner
@@ -31,6 +34,7 @@ COPY --from=build /app/next.config.ts ./next.config.ts
 # src/ + tsconfig: der Seed (tsx prisma/seed.ts) importiert aus ../src/lib
 COPY --from=build /app/src ./src
 COPY --from=build /app/tsconfig.json ./tsconfig.json
+COPY --from=build /app/source ./source
 
 # Upload-Verzeichnis (per Volume gemountet)
 RUN mkdir -p storage/documents

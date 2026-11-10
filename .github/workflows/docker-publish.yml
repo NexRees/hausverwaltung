@@ -33,6 +33,11 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # nexrees: AGPL § 13. The repository is private, so the image carries the source of this
+      # commit and the app serves it to signed-in users (/api/source).
+      - name: Pack the source of this commit
+        run: git archive --format=tar.gz --prefix="nexrees-${GITHUB_SHA::12}/" -o source.tar.gz "$GITHUB_SHA"
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 

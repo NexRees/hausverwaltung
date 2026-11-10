@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, BookOpen, Globe, Bug, ExternalLink, Building2, Code2 } from "lucide-react";
+import { Info, BookOpen, Globe, ExternalLink, Building2, Code2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,6 @@ import { BRAND, sourceUrlFor } from "@/lib/brand";
 const DOCS_URL = "https://fgilde.github.io/hausverwaltung/docs/";
 // nexrees: own website, issues and the AGPL source link; docs stay upstream's.
 const SITE_URL = BRAND.website;
-const ISSUES_URL = BRAND.issuesUrl;
 const GILDE_URL = "https://www.gilde.org";
 const GILDE_LOGO = "https://www.gilde.org/gilde/logo.svg";
 
@@ -36,7 +35,6 @@ export function InfoDrawer({
   const links = [
     { href: DOCS_URL, icon: BookOpen, label: t("docs") },
     { href: SITE_URL, icon: Globe, label: t("website") },
-    { href: ISSUES_URL, icon: Bug, label: t("issues") },
     { href: sourceUrlFor(APP_SHA), icon: Code2, label: t("source") },
   ];
 
