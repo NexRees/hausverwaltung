@@ -191,6 +191,10 @@ model Tenant {
 
   bankConnector BankConnector?
   sepaCollections SepaCollection[] // nexrees
+  // nexrees: general ledger (src/modules/ledger)
+  ledgerAccounts LedgerAccount[]
+  journalEntries JournalEntry[]
+  ledgerChain    LedgerChain?
 }
 
 model User {
@@ -1335,4 +1339,92 @@ model JobLease {
   name      String   @id
   holder    String
   expiresAt DateTime
+}
+
+// ---------- nexrees: general ledger (double-entry) ----------
+// Copyright (c) 2026 NexRees. Module: src/modules/ledger. Tables and functions come from the
+// migrations 20261110160000_nexrees_ledger_core and 20261110160100_nexrees_ledger_havewa.
+// JournalEntry and JournalLine are append-only and written only by the database function
+// nexrees_ledger_post(); "propertyId", "sourceId", "leaseId" and "personId" are plain ids on
+// purpose (the journal outlives the records it names).
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum JournalKind {
+  BOOKING
+  STORNO
+}
+
+model LedgerAccount {
+  id          String            @id @default(cuid())
+  tenantId    String
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number      String
+  name        String
+  type        LedgerAccountType
+  key         String? // role for automatic postings (DEBTORS, INCOME_RENT, ACC:<Account.id> …)
+  datevNumber String? // account number at the tax adviser, when it differs from `number`
+  lines       JournalLine[]
+  createdAt   DateTime          @default(now())
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, key])
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  seq         Int // without gaps per company
+  date        DateTime      @db.Date
+  text        String
+  propertyId  String?
+  sourceTable String? // "Charge" | "Payment" | "ReserveTransaction"; null = free entry
+  sourceId    String?
+  kind        JournalKind   @default(BOOKING)
+  reversesId  String?       @unique
+  reverses    JournalEntry? @relation("Storno", fields: [reversesId], references: [id], onDelete: NoAction)
+  reversedBy  JournalEntry? @relation("Storno")
+  userId      String?
+  userName    String?
+  source      String? // "ui", "api:<token>", "db"
+  prevHash    String
+  hash        String
+  lines       JournalLine[]
+  createdAt   DateTime
+
+  @@unique([tenantId, seq])
+  @@index([tenantId, date])
+  @@index([tenantId, sourceTable, sourceId])
+  @@index([tenantId, propertyId])
+}
+
+model JournalLine {
+  id        String        @id
+  tenantId  String
+  entryId   String
+  entry     JournalEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  position  Int
+  accountId String
+  account   LedgerAccount @relation(fields: [accountId], references: [id], onDelete: NoAction)
+  debit     Decimal       @default(0) @db.Decimal(14, 2)
+  credit    Decimal       @default(0) @db.Decimal(14, 2)
+  leaseId   String?
+  personId  String?
+
+  @@index([entryId])
+  @@index([tenantId, accountId])
+  @@index([tenantId, leaseId])
+}
+
+// Lock row that serialises the postings of a company.
+model LedgerChain {
+  tenantId String @id
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }

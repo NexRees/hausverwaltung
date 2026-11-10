@@ -13,6 +13,7 @@ const ENTITY_DE: Record<string, string> = {
   Payment: "Zahlung",
   CostEntry: "Kostenposition",
   ReserveTransaction: "Rücklagenbuchung",
+  JournalEntry: "Buchung",
 };
 
 /** Readable message when `e` is the period-lock refusal from the database, else null. */

@@ -591,7 +591,7 @@ export default async function FinancesPage({
         <CardContent className="flex flex-wrap items-start gap-2">
           {bankLinks.length > 0 && <SyncAllButton />}
             <CamtDialog accounts={accountOpts} />
-            <Button size="sm" variant="outline" render={<a href="/api/export/datev" />}>
+            <Button size="sm" variant="outline" render={<a href={`/api/export/datev?year=${new Date().getUTCFullYear()}`} />}>
               <Download className="size-4" />
               {t("finances.datevExport")}
             </Button>

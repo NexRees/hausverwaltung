@@ -11,6 +11,8 @@ import { isEInvoice, parseEInvoice } from "@/lib/adapters/erechnung";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limit";
 import { encryptSecret } from "@/lib/crypto";
 import { aiResidencyProblem } from "@/lib/ai";
+import { postManualEntry, reverseManualEntry, verifyChain } from "@/modules/ledger/core";
+import { ledgerDb, propertyOfTenant, withLedger } from "@/modules/ledger/havewa";
 
 // Dedizierte Operationen (kein reines CRUD) für REST-API + MCP.
 // Fachlogik gespiegelt aus den Server Actions, aber Bearer-Auth statt Session.
@@ -102,6 +104,57 @@ export const OPERATIONS: Record<string, Op> = {
       }
       created += await generateAreaCharges(p.tenantId, first, due, last);
       return { created, skipped: leases.length - created };
+    },
+  },
+
+  // nexrees: general ledger (src/modules/ledger)
+  post_journal_entry: {
+    description:
+      "Freie Buchung im Hauptbuch: Soll-Konto an Haben-Konto. Sollstellungen, Zahlungen und Rücklagen werden automatisch gebucht und nicht hierüber erfasst. Konten-IDs aus GET /api/v1/ledger-accounts.",
+    params: {
+      date: "Buchungsdatum YYYY-MM-DD (nicht im festgeschriebenen Zeitraum)",
+      text: "Buchungstext",
+      debitAccountId: "Soll-Konto (LedgerAccount-ID)",
+      creditAccountId: "Haben-Konto (LedgerAccount-ID)",
+      amount: "Betrag > 0, höchstens zwei Nachkommastellen",
+      propertyId: "optional: Objekt (Buchungskreis)",
+    },
+    required: ["date", "text", "debitAccountId", "creditAccountId", "amount"],
+    run: async (p, a) => {
+      const propertyId = s(a.propertyId);
+      if (propertyId && !(await propertyOfTenant(p.tenantId, propertyId))) throw new ApiWriteError("Objekt nicht gefunden", 404);
+      const id = await withLedger({ id: p.userId, name: p.name, source: apiSource(p) }, (db) =>
+        postManualEntry(db, p.tenantId, {
+          date: String(need(a, "date")),
+          text: String(need(a, "text")),
+          debitAccountId: String(need(a, "debitAccountId")),
+          creditAccountId: String(need(a, "creditAccountId")),
+          amount: Number(need(a, "amount")),
+          propertyId,
+        }),
+      );
+      return { id };
+    },
+  },
+  reverse_journal_entry: {
+    description:
+      "Storno einer freien Buchung: Gegenbuchung mit vertauschtem Soll/Haben zum selben Datum. Buchungen aus Belegen (Sollstellung, Zahlung, Rücklage) werden über den Beleg korrigiert.",
+    params: { entryId: "ID der Buchung (JournalEntry)" },
+    required: ["entryId"],
+    run: async (p, a) => {
+      const id = await withLedger({ id: p.userId, name: p.name, source: apiSource(p) }, (db) =>
+        reverseManualEntry(db, p.tenantId, String(need(a, "entryId"))),
+      );
+      return { id };
+    },
+  },
+  verify_ledger: {
+    description:
+      "Prüft die Hash-Kette des Journals: lückenlose Nummerierung, Verkettung und unveränderter Inhalt. firstBadSeq = null bedeutet intakt.",
+    params: {},
+    run: async (p) => {
+      const c = await verifyChain(ledgerDb(), p.tenantId);
+      return { ...c, intact: c.firstBadSeq == null };
     },
   },
 

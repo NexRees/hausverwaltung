@@ -177,6 +177,18 @@ const spec = {
     "/api/v1/resolutions": { get: listOp("Versammlung", "Beschlusssammlung auflisten") },
     "/api/v1/economic-plans": { get: listOp("WEG", "Wirtschaftspläne auflisten") },
     "/api/v1/reserves": { get: listOp("WEG", "Erhaltungsrücklagen + Saldo auflisten") },
+    // nexrees: general ledger (src/modules/ledger); staff tokens only
+    "/api/v1/journal": {
+      get: listOp("Hauptbuch", "Journal (doppelte Buchführung), neueste Buchung zuerst, mit Zeilen (Konto, Soll, Haben)", {
+        q: true,
+        filters: [qp("from", "ab Buchungsdatum (YYYY-MM-DD)"), qp("to", "bis Buchungsdatum (YYYY-MM-DD)"), idFilter("propertyId", "Objekt"), idFilter("accountId", "Hauptbuchkonto")],
+      }),
+    },
+    "/api/v1/ledger-accounts": {
+      get: listOp("Hauptbuch", "Kontenplan mit Summen und Salden (opening, debit, credit, closing; Soll positiv)", {
+        filters: [qp("from", "ab Buchungsdatum (YYYY-MM-DD)"), qp("to", "bis Buchungsdatum (YYYY-MM-DD)"), idFilter("propertyId", "Objekt")],
+      }),
+    },
     "/api/v1/appointments": { get: listOp("Kalender", "Termine auflisten") },
     "/api/v1/contractors": { get: listOp("Instandhaltung", "Handwerker/Dienstleister auflisten", { q: true }) },
     "/api/v1/maintenance-contracts": { get: listOp("Instandhaltung", "Wartungsverträge auflisten") },

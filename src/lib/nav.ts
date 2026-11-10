@@ -23,6 +23,7 @@ import {
   Handshake,
   Building,
   Inbox,
+  BookOpenCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,6 +48,7 @@ export const navGroups: NavGroup[] = [
     labelKey: "nav.groupFinance",
     items: [
       { key: "nav.finances", href: "/finances", icon: Banknote },
+      { key: "nav.ledger", href: "/ledger", icon: BookOpenCheck }, // nexrees: general ledger (src/modules/ledger)
       { key: "nav.dunning", href: "/dunning", icon: AlertTriangle },
       { key: "nav.statements", href: "/statements", icon: Calculator },
       { key: "nav.weg", href: "/weg", icon: Landmark },

@@ -14,6 +14,9 @@ import { runOperation, listOperations, OPERATION_NAMES } from "@/lib/api-ops";
 import { BRAND } from "@/lib/brand";
 import { MAX_OFFSET } from "@/lib/api-http";
 import { periodLockMessage } from "@/server/ledger";
+import { isStaffRole } from "@/lib/staff-access";
+import { listAccounts, listJournal, trialBalance } from "@/modules/ledger/core";
+import { ledgerDb } from "@/modules/ledger/havewa";
 
 // MCP-Server (Model Context Protocol) über Streamable HTTP / JSON-RPC.
 // Auth: Bearer-Token (persönlicher API-Token). Der Agent (Claude, ChatGPT,
@@ -81,6 +84,18 @@ function listTool<O>(
     },
   };
 }
+
+// nexrees: the general ledger is for staff (ADMIN, VERWALTER, BUCHHALTUNG), not for portal tokens.
+function staffOnly(tool: Tool): Tool {
+  return {
+    ...tool,
+    run: async (p, a) => {
+      if (!isStaffRole(p.role)) throw new Error("Keine Berechtigung für das Hauptbuch (forbidden)");
+      return tool.run(p, a);
+    },
+  };
+}
+const DAY_ARG = (what: string) => ({ type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: `${what} (YYYY-MM-DD)` });
 
 const notFound = (what: string, id: string) => new Error(`Nicht gefunden (not found): ${what} ${id}`);
 
@@ -182,6 +197,27 @@ const TOOLS: Tool[] = [
   listTool("list_resolutions", "Beschlusssammlung (§24 WEG): Beschlüsse je Objekt mit Nummer, Text, Ergebnis und Abstimmung.", data.listResolutions),
   listTool("list_economic_plans", "WEG-Wirtschaftspläne (§28) je Objekt/Jahr mit Gesamtbetrag und monatlichem Hausgeld.", data.listEconomicPlans),
   listTool("list_reserves", "Erhaltungsrücklagen je Objekt mit aktuellem Saldo.", data.listReserves),
+  staffOnly(
+    listTool(
+      "list_journal",
+      "Hauptbuch-Journal (doppelte Buchführung), neueste zuerst: Buchungen mit Nummer (seq), Datum, Text, Objekt, Herkunft (Beleg) und Zeilen (Konto, Soll, Haben). Storno-Buchungen verweisen per reversesId auf das Original.",
+      (tenantId: string, o: { limit: number; offset: number; q?: string; from?: string; to?: string; propertyId?: string; accountId?: string }) =>
+        listJournal(ledgerDb(), tenantId, o),
+      { ...Q, from: DAY_ARG("ab Buchungsdatum"), to: DAY_ARG("bis Buchungsdatum"), propertyId: idOf("Objekt"), accountId: idOf("Hauptbuchkonto") },
+    ),
+  ),
+  staffOnly(
+    listTool(
+      "list_ledger_accounts",
+      "Kontenplan mit Summen und Salden: opening = Saldo vor from, debit/credit = Umsätze im Zeitraum, closing = Endsaldo (Soll positiv). Optional je Objekt.",
+      async (tenantId: string, o: { limit: number; offset: number; from?: string; to?: string; propertyId?: string }) => {
+        await listAccounts(ledgerDb(), tenantId);
+        const rows = await trialBalance(ledgerDb(), tenantId, o);
+        return { items: rows.slice(o.offset, o.offset + o.limit), total: rows.length };
+      },
+      { from: DAY_ARG("ab Buchungsdatum"), to: DAY_ARG("bis Buchungsdatum"), propertyId: idOf("Objekt") },
+    ),
+  ),
   listTool("list_appointments", "Termine (Besichtigung/Versammlung/Wartung/Frist) mit Start, Ende, Ort und Teilnehmern.", data.listAppointments),
   listTool("list_tasks", "Aufgaben/Wiedervorlagen mit Fälligkeit, Status, Zuständigkeit und verknüpftem Datensatz.", data.listTasks, {
     done: { ...bool, description: "false = nur offene / open only" },

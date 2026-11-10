@@ -123,6 +123,8 @@ async function reset() {
           const r = await delegate.deleteMany({ where: { tenantId: t.id, id: { startsWith: ID_PREFIX } } });
           if (r.count) console.log(`  removed ${model.padEnd(20)} ${r.count}`);
         }
+        // nexrees: the documents went without Storno, so the journal is rebuilt from what is left
+        if (INTO) await tx.$executeRaw`SELECT nexrees_ledger_rebuild(${t.id})`;
         if (!INTO) await tx.tenant.delete({ where: { id: t.id } });
       },
       { timeout: 600_000, maxWait: 30_000 },
@@ -370,6 +372,14 @@ async function main() {
   for (let k = 0; k < months * 4000; k++) push("auditLog", { id: id(), tenantId, userId: pick(userIds), userName: "Verwalter", action: pick(["CREATE", "UPDATE", "UPDATE", "DELETE"]), entity: pick(["Lease", "Payment", "Charge", "Ticket", "Person"]), entityId: id(), summary: "synthetisch", createdAt: new Date(startMonth.getTime() + rnd() * (now.getTime() - startMonth.getTime())) });
   if (!existing) for (const uid of userIds) for (let k = 0; k < 200; k++) push("notification", { id: id(), tenantId, userId: uid, title: "Schadensmeldung eingegangen", link: "/tickets", read: chance(0.9) });
   for (const m of ["task", "emailMessage", "letter", "auditLog", "notification"]) await flush(m);
+
+  // nexrees: booking rows were loaded in purge mode (no triggers), so the general ledger is
+  // posted here in one go (migration 20261110160100_nexrees_ledger_havewa).
+  const posted = await prisma.$transaction(
+    (tx) => tx.$queryRaw<{ n: number }[]>`SELECT nexrees_ledger_backfill(${tenantId}) AS n`,
+    { timeout: 600_000, maxWait: 30_000 },
+  );
+  console.log(`  journalEntry         ${posted[0]?.n ?? 0}`);
 
   const s = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`done in ${s}s: ${units.length} units, ${properties.length} properties, ${persons.length} persons, ${charges} charges. ${existing ? `Tenant: ${INTO}` : `Login: ${SCALE_ADMIN_EMAIL}`}`);
