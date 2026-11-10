@@ -43,10 +43,17 @@ export function UserMenu({
     <>
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" className="relative size-9 rounded-full p-0" />}
+        render={
+          // nexrees: named by the person, not only by the initials in the avatar.
+          <Button
+            variant="ghost"
+            className="relative size-9 rounded-full p-0"
+            aria-label={t("portal.accountMenu", { name: name || email || "" })}
+          />
+        }
       >
-        <Avatar className="size-9">
-          <AvatarFallback>{initials(name)}</AvatarFallback>
+        <Avatar className="size-9" aria-hidden>
+          <AvatarFallback className="text-foreground">{initials(name)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

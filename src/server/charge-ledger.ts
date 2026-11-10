@@ -19,7 +19,12 @@ export function chargeStatus(amount: number, paid: number, dueDate: Date, now: D
 }
 
 // One row per charge of the tenant with paid sum, open amount, status and highest dunning level.
-function ledgerSql(tenantId: string, now: Date) {
+// `leaseIds` (non-empty) narrows charges, payments and dunning notices to those leases (portal).
+function ledgerSql(tenantId: string, now: Date, leaseIds?: string[]) {
+  const leaseCharges = leaseIds
+    ? Prisma.sql` AND "chargeId" IN (SELECT id FROM "Charge" WHERE "tenantId" = ${tenantId} AND "leaseId" IN (${Prisma.join(leaseIds)}))`
+    : Prisma.empty;
+  const leaseScope = leaseIds ? Prisma.sql` AND ch."leaseId" IN (${Prisma.join(leaseIds)})` : Prisma.empty;
   return Prisma.sql`
     WITH c AS (
       SELECT ch.id, ch.amount::float8 AS amount, ch."dueDate", ch.period, ch.type::text AS type, ch."leaseId",
@@ -27,13 +32,13 @@ function ledgerSql(tenantId: string, now: Date) {
       FROM "Charge" ch
       LEFT JOIN (
         SELECT "chargeId", SUM(amount) AS paid FROM "Payment"
-        WHERE "tenantId" = ${tenantId} AND "chargeId" IS NOT NULL GROUP BY "chargeId"
+        WHERE "tenantId" = ${tenantId} AND "chargeId" IS NOT NULL${leaseCharges} GROUP BY "chargeId"
       ) p ON p."chargeId" = ch.id
       LEFT JOIN (
         SELECT "chargeId", MAX(level) AS lvl FROM "DunningNotice"
-        WHERE "tenantId" = ${tenantId} GROUP BY "chargeId"
+        WHERE "tenantId" = ${tenantId}${leaseCharges} GROUP BY "chargeId"
       ) d ON d."chargeId" = ch.id
-      WHERE ch."tenantId" = ${tenantId}
+      WHERE ch."tenantId" = ${tenantId}${leaseScope}
     )
     SELECT c.*, (c.amount - c.paid) AS open,
       CASE WHEN c.amount - c.paid <= ${EPS} THEN 'PAID'
@@ -77,4 +82,23 @@ export async function openCharges(tenantId: string, now = new Date()): Promise<L
   const rows = await prisma.$queryRaw<LedgerRow[]>`SELECT l.id, l.paid, l.open, l.status, l."dunLevel"
     FROM (${ledgerSql(tenantId, now)}) l WHERE l.status <> 'PAID' ORDER BY l."dueDate" ASC, l.id ASC`;
   return rows.map((r) => ({ ...r, paid: Number(r.paid), open: Number(r.open), dunLevel: Number(r.dunLevel) }));
+}
+
+export type LeaseOpenCharge = {
+  id: string;
+  leaseId: string;
+  type: string;
+  period: Date;
+  dueDate: Date;
+  amount: number;
+  paid: number;
+  open: number;
+};
+
+/** Open charges of some leases (a tenant's own, in the portal), oldest due date first. */
+export async function openChargesForLeases(tenantId: string, leaseIds: string[], now = new Date()): Promise<LeaseOpenCharge[]> {
+  if (leaseIds.length === 0) return [];
+  const rows = await prisma.$queryRaw<LeaseOpenCharge[]>`SELECT l.id, l."leaseId", l.type, l.period, l."dueDate", l.amount, l.paid, l.open
+    FROM (${ledgerSql(tenantId, now, leaseIds)}) l WHERE l.status <> 'PAID' ORDER BY l."dueDate" ASC, l.id ASC`;
+  return rows.map((r) => ({ ...r, amount: Number(r.amount), paid: Number(r.paid), open: Number(r.open) }));
 }
