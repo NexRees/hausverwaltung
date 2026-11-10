@@ -10,6 +10,8 @@ on:
     paths:
       - "prisma/**"
       - "src/lib/accounts.ts"
+      - "src/modules/ledger/**"
+      - "src/server/ledger.ts"
       - ".github/workflows/nexrees-seed-check.yml"
   workflow_dispatch:
 
@@ -61,6 +63,12 @@ jobs:
           units=$(q "select count(*) from \"Unit\"")
           charges=$(q "select count(*) from \"Charge\"")
           echo "units=$units charges=$charges"
+          # General ledger: every document is posted, debtors equal the open documents, chain intact.
+          entries=$(q "select count(*) from \"JournalEntry\"")
+          bad=$(q "select count(*) from \"Tenant\" t, nexrees_ledger_verify(t.\"id\") v where v.\"firstBadSeq\" is not null")
+          unbalanced=$(q "select count(*) from (select \"entryId\" from \"JournalLine\" group by 1 having sum(\"debit\") <> sum(\"credit\")) x")
+          echo "journal entries=$entries brokenChains=$bad unbalanced=$unbalanced"
+          [ "$entries" -ge "$charges" ] && [ "$bad" = 0 ] && [ "$unbalanced" = 0 ] || { echo "::error::ledger does not match the seeded documents"; exit 1; }
           [ "$units" -ge 100 ] && [ "$charges" -gt 0 ] || { echo "::error::seed produced no data"; exit 1; }
           if npx tsx prisma/scale-seed.ts; then echo "::error::second load should be refused"; exit 1; fi
           SCALE_RESET=1 npx tsx prisma/scale-seed.ts
@@ -70,6 +78,11 @@ jobs:
           echo "after reset: units=$left accounts=$after (before $before) users=$users"
           [ "$left" = 0 ] || { echo "::error::reset left generated units"; exit 1; }
           [ "$after" = "$before" ] && [ "$users" = 1 ] || { echo "::error::reset touched the company's own data"; exit 1; }
+
+      - name: Bookkeeping and ledger rules against the database
+        env:
+          NEXREES_DB_TEST: "1"
+        run: npx vitest run src/modules/ledger/ledger.db.test.ts src/server/bookkeeping.db.test.ts
 
       - name: Standalone scale tenant still works
         env:
