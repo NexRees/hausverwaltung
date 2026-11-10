@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { bookAs } from "@/server/ledger";
 import { requireWriter } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { pickCustom } from "@/lib/custom";
@@ -53,11 +54,16 @@ export async function updateProperty(_p: ActionState, fd: FormData): Promise<Act
   return done();
 }
 
-export async function deleteProperty(fd: FormData): Promise<void> {
+// nexrees: cascades into booked rows; refused with a message when they are in a closed period
+export async function deleteProperty(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
   const id = String(fd.get("id") ?? "");
-  const res = await prisma.property.deleteMany({ where: { id, tenantId: user.tenantId } });
-  if (res.count > 0) await audit(user, "DELETE", "Property", id);
+  let count = 0;
+  const locked = await bookAs(user, async (tx) => {
+    count = (await tx.property.deleteMany({ where: { id, tenantId: user.tenantId } })).count;
+  });
+  if (locked) return locked;
+  if (count > 0) await audit(user, "DELETE", "Property", id);
   revalidatePath("/", "layout");
 }
 
@@ -88,11 +94,12 @@ export async function updateBuilding(_p: ActionState, fd: FormData): Promise<Act
   return done();
 }
 
-export async function deleteBuilding(fd: FormData): Promise<void> {
+// nexrees: cascades into booked rows; refused with a message when they are in a closed period
+export async function deleteBuilding(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.building.deleteMany({
-    where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId },
-  });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.building.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 
@@ -138,11 +145,12 @@ export async function updateUnit(_p: ActionState, fd: FormData): Promise<ActionS
   return done();
 }
 
-export async function deleteUnit(fd: FormData): Promise<void> {
+// nexrees: cascades into booked rows; refused with a message when they are in a closed period
+export async function deleteUnit(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.unit.deleteMany({
-    where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId },
-  });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.unit.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 

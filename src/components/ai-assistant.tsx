@@ -44,6 +44,9 @@ export function AiAssistant() {
             {state.answer}
           </div>
         )}
+        {state.answer && state.source && (
+          <p className="text-xs text-muted-foreground">{state.source}</p> // nexrees: AI Act Art. 50 label
+        )}
         {state.configured === false && (
           <p className="text-xs text-muted-foreground">{t("notConfigured")}</p>
         )}

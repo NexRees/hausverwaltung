@@ -98,7 +98,11 @@ export async function syncAllBankLinks(_p: ActionState, _fd: FormData): Promise<
   const res = await syncTenantBank(user.tenantId);
   if ("error" in res) return { error: res.error };
   revalidatePath("/", "layout");
-  const summary = `${res.imported} Buchungen importiert, ${res.matched} zugeordnet`;
+  let summary = `${res.imported} Buchungen importiert, ${res.matched} zugeordnet`;
+  if (res.skippedLocked && res.lockedUntil) {
+    // nexrees: transactions in the closed period are reported, not imported
+    summary += `, ${res.skippedLocked} im festgeschriebenen Zeitraum (bis ${res.lockedUntil.split("-").reverse().join(".")}) nicht übernommen`;
+  }
   if (res.failed.length) return { error: `${summary}. Fehler: ${res.failed.join("; ")}` };
   return { ok: true, error: summary };
 }

@@ -21,6 +21,13 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedAllowed } from "./seed-guard";
 
+// nexrees: German IBAN with a valid check sum (the SEPA export refuses invalid ones).
+function deIban(bban18: string): string {
+  let r = 0;
+  for (const ch of `${bban18}131400`) r = (r * 10 + Number(ch)) % 97; // "DE00" → 13 14 0 0
+  return `DE${String(98 - r).padStart(2, "0")}${bban18}`;
+}
+
 const TENANT_NAME = "Scale Test Hausverwaltung";
 const INTO = process.env.SCALE_TENANT?.trim() || ""; // load into this existing tenant instead
 export const SCALE_ADMIN_EMAIL = "scale-admin@nexrees.test";
@@ -65,10 +72,27 @@ type Row = Record<string, unknown>;
 const buf: Record<string, Row[]> = {};
 const push = (model: string, row: Row) => (buf[model] ??= []).push(row);
 
+// nexrees: booking tables refuse rows in a closed period (Festschreibung); generated test data is
+// loaded past that check (purge mode), so the seed also works in a company with a closed period.
+const LOCKED_TABLES = new Set(["charge", "payment", "reserveTransaction"]);
+type Delegates = Record<string, { createMany(a: { data: Row[] }): Promise<unknown> }>;
+
 async function flush(model: string) {
   const rows = buf[model] ?? [];
-  const delegate = (prisma as unknown as Record<string, { createMany(a: { data: Row[] }): Promise<unknown> }>)[model];
-  for (let i = 0; i < rows.length; i += CHUNK) await delegate.createMany({ data: rows.slice(i, i + CHUNK) });
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const data = rows.slice(i, i + CHUNK);
+    if (!LOCKED_TABLES.has(model)) {
+      await (prisma as unknown as Delegates)[model].createMany({ data });
+      continue;
+    }
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT set_config('nexrees.purge', 'on', true)`;
+        await (tx as unknown as Delegates)[model].createMany({ data });
+      },
+      { timeout: 120_000 },
+    );
+  }
   console.log(`  ${model.padEnd(20)} ${rows.length}`);
   buf[model] = [];
 }
@@ -89,12 +113,20 @@ async function reset() {
     : await prisma.tenant.findMany({ where: { name: TENANT_NAME }, select: { id: true } });
   if (INTO && tenants.length !== 1) throw new Error(`SCALE_TENANT "${INTO}": expected exactly one tenant, found ${tenants.length}`);
   for (const t of tenants) {
-    for (const model of RESET_ORDER) {
-      const delegate = (prisma as unknown as Record<string, { deleteMany(a: unknown): Promise<{ count: number }> }>)[model];
-      const r = await delegate.deleteMany({ where: { tenantId: t.id, id: { startsWith: ID_PREFIX } } });
-      if (r.count) console.log(`  removed ${model.padEnd(20)} ${r.count}`);
-    }
-    if (!INTO) await prisma.tenant.delete({ where: { id: t.id } });
+    // nexrees: generated test data is purged, not journaled, and ignores the period lock
+    // (DB triggers of migration 20261109210000_nexrees_bookkeeping_integrity).
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT set_config('nexrees.purge', 'on', true)`;
+        for (const model of RESET_ORDER) {
+          const delegate = (tx as unknown as Record<string, { deleteMany(a: unknown): Promise<{ count: number }> }>)[model];
+          const r = await delegate.deleteMany({ where: { tenantId: t.id, id: { startsWith: ID_PREFIX } } });
+          if (r.count) console.log(`  removed ${model.padEnd(20)} ${r.count}`);
+        }
+        if (!INTO) await tx.tenant.delete({ where: { id: t.id } });
+      },
+      { timeout: 600_000, maxWait: 30_000 },
+    );
   }
   console.log(INTO ? `removed the generated data from "${INTO}"` : `removed ${tenants.length} scale tenant(s)`);
 }
@@ -161,7 +193,7 @@ async function main() {
     const pid = id();
     const firstName = company ? pick(["Immobilien", "Grundbesitz", "Wohnbau", "Vermögensverwaltung"]) : pick(FIRST);
     const lastName = company ? `${pick(LAST)} ${pick(["GmbH", "GmbH & Co. KG", "AG", "GbR"])}` : pick(LAST);
-    const iban = `DE${int(10, 99)}5005${String(int(0, 99999999)).padStart(8, "0")}${String(int(0, 999999)).padStart(6, "0")}`;
+    const iban = deIban(`5005${String(int(0, 99999999)).padStart(8, "0")}${String(int(0, 999999)).padStart(6, "0")}`);
     persons.push({ id: pid, name: `${firstName} ${lastName}`, iban });
     push("person", { id: pid, tenantId, firstName, lastName, type, email: `p${pid.slice(-6)}@mail.test`, phone: chance(0.6) ? `0151 ${int(1000000, 9999999)}` : null, iban, accountHolder: `${firstName} ${lastName}`, address: `${pick(STREETS)} ${int(1, 120)}\n${pick(CITIES).join(" ")}` });
     return pid;
@@ -176,7 +208,7 @@ async function main() {
     const [zip, city] = pick(CITIES);
     const accountId = id();
     push("property", { id: propertyId, tenantId, name: `${weg ? "WEG " : ""}${pick(STREETS)} ${int(1, 200)}`, street: `${pick(STREETS)} ${int(1, 200)}`, zip, city, type: chance(0.1) ? "GEMISCHT" : "WOHNEN", management: weg ? "WEG" : "MIET", feeType: chance(0.5) ? "PRO_EINHEIT" : "PAUSCHAL", feeValue: money(weg ? 28 : 450) });
-    push("account", { id: accountId, tenantId, name: `Objektkonto ${pIdx + 1}`, type: "BANK", iban: `DE${int(10, 99)}50050201${String(int(0, 9999999999)).padStart(10, "0")}` });
+    push("account", { id: accountId, tenantId, name: `Objektkonto ${pIdx + 1}`, type: "BANK", iban: deIban(`50050201${String(int(0, 9999999999)).padStart(10, "0")}`) });
     const prop = { id: propertyId, weg, accountId, unitIds: [] as string[], ownerPersonIds: [] as string[] };
     const buildings = size > 30 ? int(2, 4) : 1;
     const bIds = Array.from({ length: buildings }, (_, b) => {

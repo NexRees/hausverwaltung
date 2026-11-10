@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
 import { personSchema, type ActionState, invalid } from "@/lib/schemas";
 import { pickCustom } from "@/lib/custom";
+import { bookAs } from "@/server/ledger";
 
 export async function createPerson(_p: ActionState, fd: FormData): Promise<ActionState> {
   const user = await requireWriter();
@@ -29,10 +30,14 @@ export async function updatePerson(_p: ActionState, fd: FormData): Promise<Actio
   return { ok: true };
 }
 
-export async function deletePerson(fd: FormData): Promise<void> {
+// nexrees: through bookAs so the journal names the user for the SEPA mandates deleted with the person
+export async function deletePerson(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.person.deleteMany({
-    where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId },
-  });
+  const locked = await bookAs(user, (tx) =>
+    tx.person.deleteMany({
+      where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId },
+    }),
+  );
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }

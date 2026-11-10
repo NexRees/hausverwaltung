@@ -13,6 +13,7 @@ import { apiCreate, apiUpdate, apiDelete, listEntities, ENTITIES } from "@/lib/a
 import { runOperation, listOperations, OPERATION_NAMES } from "@/lib/api-ops";
 import { BRAND } from "@/lib/brand";
 import { MAX_OFFSET } from "@/lib/api-http";
+import { periodLockMessage } from "@/server/ledger";
 
 // MCP-Server (Model Context Protocol) über Streamable HTTP / JSON-RPC.
 // Auth: Bearer-Token (persönlicher API-Token). Der Agent (Claude, ChatGPT,
@@ -331,7 +332,8 @@ export async function POST(req: Request) {
         return rpc(id, toolResult(result));
       } catch (e) {
         return rpc(id, {
-          content: [{ type: "text", text: `Fehler: ${toolErrorText(e)}` }],
+          // nexrees: readable text for a closed booking period, checked before database errors are hidden
+          content: [{ type: "text", text: `Fehler: ${periodLockMessage(e) ?? toolErrorText(e)}` }],
           isError: true,
         });
       }

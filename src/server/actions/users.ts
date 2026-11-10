@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assignableRoles, canDeleteUser } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
+import { passwordProblem } from "@/lib/password-policy";
 import { userCreateSchema, userEditSchema, type ActionState, invalid } from "@/lib/schemas";
 
 const MANAGE_ROLES = ["VERWALTER"] as const; // ADMIN ist via roleAllows immer dabei
@@ -94,7 +95,8 @@ export async function resetPassword(_p: ActionState, fd: FormData): Promise<Acti
   const actor = await requireRole([...MANAGE_ROLES]);
   const id = String(fd.get("id") ?? "");
   const password = String(fd.get("password") ?? "");
-  if (password.length < 6) return { error: "Passwort zu kurz (min. 6 Zeichen)." };
+  const weak = passwordProblem(password); // nexrees: shared password policy
+  if (weak) return { error: weak };
 
   const target = await prisma.user.findFirst({
     where: { id, tenantId: actor.tenantId },

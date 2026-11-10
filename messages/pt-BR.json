@@ -213,7 +213,7 @@
     "tenantName": "Nome da organização",
     "tenantNamePlaceholder": "ex.: Organização Exemplo Ltda.",
     "adminName": "Seu nome",
-    "passwordHint": "Pelo menos 6 caracteres.",
+    "passwordHint": "Pelo menos 12 caracteres.",
     "brandColor": "Cor do tema",
     "preview": "Pré-visualização",
     "submit": "Concluir configuração",
@@ -1446,5 +1446,38 @@
     "notFoundTitle": "Página não encontrada",
     "notFoundBody": "Esta página não existe ou o registro foi excluído. Verifique o endereço ou vá para o painel.",
     "deleteBlocked": "Não é possível excluir: {reason}"
+  },
+  "nexrees": {
+    "statementLate": {
+      "confirm": "O prazo da prestação de contas de {year} terminou em {deadline} (§ 556 (3) BGB). Pagamentos complementares só podem ser lançados se a prestação de contas chegou aos inquilinos a tempo (o prazo não se aplica a imóveis comerciais). Confirma a entrega dentro do prazo?"
+    },
+    "sepa": {
+      "date": "Data de cobrança",
+      "create": "Criar débito direto SEPA",
+      "hint": "Cobra as cobranças em aberto com vencimento nos 35 dias até a data de cobrança (sem aviso de cobrança), menos créditos. Cada cobrança entra em um só arquivo. Não esqueça a notificação prévia aos inquilinos.",
+      "created": "Arquivo de débito criado",
+      "line": "Cobrança {date} · {count} débitos · {total}",
+      "cancel": "Cancelar arquivo",
+      "cancelDesc": "Cancele apenas se o arquivo não foi enviado ao banco. As cobranças poderão então ser cobradas novamente.",
+      "cancelled": "cancelado"
+    },
+    "bookkeeping": {
+      "tab": "Contabilidade",
+      "lockTitle": "Fechamento de período (GoBD)",
+      "lockHint": "Meses inteiros até o mês escolhido (inclusive) ficam bloqueados: cobranças, pagamentos e lançamentos de reserva não podem mais ser criados, alterados ou excluídos, nem pela API ou pela sincronização bancária. Correções são feitas como novos lançamentos no período aberto. Não pode ser desfeito.",
+      "lockedUntil": "Fechado até",
+      "notLocked": "Nada fechado ainda.",
+      "lockUntil": "Fechar até o mês (inclusive)",
+      "lockButton": "Fechar período",
+      "lockConfirm": "Fechar este período definitivamente? Não pode ser desfeito.",
+      "locked": "Fechado",
+      "sepaTitle": "Débito direto SEPA",
+      "sepaHint": "Identificador de credor (Deutsche Bundesbank) e a conta para a qual o dinheiro é cobrado. Sem dados válidos nenhum arquivo de débito é criado.",
+      "creditorId": "ID do credor",
+      "creditorIban": "IBAN da conta do credor",
+      "creditorBic": "BIC (opcional)",
+      "save": "Salvar",
+      "saved": "Salvo"
+    }
   }
 }

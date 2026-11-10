@@ -36,6 +36,8 @@ import { PaymentEditDialog } from "@/components/payment-dialog-edit";
 import { summarizeTransactions, txnWhere, type TxnFilter } from "@/lib/transactions";
 import { deleteCharge, deleteAccount, deleteMandate, deletePayment, seedDefaultAccounts } from "@/server/actions/finances";
 import { deleteBankLink } from "@/server/actions/banking";
+import { SepaExport, type SepaFile } from "@/components/sepa-export";
+import { earliestCollectionDay } from "@/lib/adapters/sepa";
 
 // Finanzen in Reitern (#53), lange Listen seitenweise.
 const TABS = ["charges", "payments", "accounts", "mandates", "io"] as const;
@@ -136,6 +138,17 @@ export default async function FinancesPage({
   };
 
   const accountOpts = accounts.map((a) => ({ value: a.id, label: a.name }));
+  const sepaFiles: SepaFile[] =
+    tab === "io"
+      ? (await prisma.sepaCollection.findMany({ where: { tenantId }, orderBy: { createdAt: "desc" }, take: 5 })).map((f) => ({
+          id: f.id,
+          collectionDate: f.collectionDate.toISOString().slice(0, 10),
+          count: f.count,
+          total: Number(f.total),
+          createdByName: f.createdByName,
+          cancelled: !!f.cancelledAt,
+        }))
+      : [];
   const leaseOpts = leases.map((l) => ({
     value: l.id,
     label: `${l.unit.building.property.name} · ${l.unit.label}`,
@@ -582,14 +595,12 @@ export default async function FinancesPage({
               <Download className="size-4" />
               {t("finances.datevExport")}
             </Button>
-            <Button size="sm" variant="outline" render={<a href="/api/export/sepa" />}>
-              <Download className="size-4" />
-              {t("finances.sepaExport")}
-            </Button>
             <Button size="sm" variant="outline" render={<a href="/api/export/openitems" />}>
               <Download className="size-4" />
               {t("finances.openItemsCsv")}
             </Button>
+            {/* nexrees: SEPA files are created by POST and recorded (no double debit) */}
+            <SepaExport earliest={earliestCollectionDay()} files={sepaFiles} />
         </CardContent>
       </Card>
         </>

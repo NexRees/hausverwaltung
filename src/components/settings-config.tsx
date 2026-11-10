@@ -121,6 +121,7 @@ export function SettingsConfig({
               >
                 <option value="anthropic">Anthropic (Claude)</option>
                 <option value="openai">OpenAI-kompatibel (OpenAI, OpenRouter, Groq, Ollama …)</option>
+                <option value="bedrock">AWS Bedrock (Region des Servers, ohne API-Schlüssel)</option>
               </select>
             </div>
             <Field name="aiBaseUrl" label={t("baseUrl")} defaultValue={ai.baseUrl ?? ""} placeholder="https://openrouter.ai/api/v1" />

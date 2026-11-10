@@ -2,11 +2,19 @@ import { prisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
 import * as eb from "@/lib/adapters/enablebanking";
 import { openCharges } from "@/server/charge-ledger";
+import { asActor, bookingsLockedUntil, inClosedPeriod, lockDay, periodLockMessage, type Actor } from "@/server/ledger";
 
 // Bank-Sync ohne Auth-Bezug: genutzt von „Konten synchronisieren“ (manuell) und
 // vom täglichen Hintergrund-Job (#54).
+//
+// nexrees: period close (Festschreibung). Transactions dated in the closed period are not imported
+// (the closed months were reconciled when they were closed) but counted and reported; the fetch
+// window starts after the closed period, and lastSyncAt always moves on, so one such transaction
+// never blocks the account. Writes are journaled as source "bank-sync".
 
-export type BankSyncResult = { imported: number; matched: number; failed: string[] };
+export type BankSyncResult = { imported: number; matched: number; skippedLocked: number; lockedUntil: string | null; failed: string[] };
+
+const BANK_SYNC: Actor = { id: "", name: "Bank-Sync", source: "bank-sync" };
 
 export async function bankConnector(tenantId: string): Promise<eb.Connector | null> {
   const c = await prisma.bankConnector.findUnique({ where: { tenantId } });
@@ -19,7 +27,9 @@ export async function syncLink(tenantId: string, linkId: string, conn: eb.Connec
   const link = await prisma.bankLink.findFirst({ where: { id: linkId, tenantId } });
   if (!link) throw new Error("Verknüpfung nicht gefunden");
   // 14 Tage Überlappung: Banken buchen teils rückdatiert (Buchungsdatum vor dem letzten Sync, #73).
-  const from = link.lastSyncAt ? new Date(link.lastSyncAt.getTime() - 14 * 86_400_000) : new Date(Date.now() - 90 * 86_400_000);
+  let from = link.lastSyncAt ? new Date(link.lastSyncAt.getTime() - 14 * 86_400_000) : new Date(Date.now() - 90 * 86_400_000);
+  const lock = await bookingsLockedUntil(tenantId);
+  if (lock && from.getTime() <= lock.getTime()) from = new Date(lock.getTime() + 86_400_000); // nexrees
   const raw = await eb.getTransactions(conn, link.accountUid, from.toISOString().slice(0, 10));
 
   // Offene Sollstellungen für Auto-Zuordnung (wie camt.053-Import).
@@ -28,6 +38,7 @@ export async function syncLink(tenantId: string, linkId: string, conn: eb.Connec
 
   let imported = 0;
   let matched = 0;
+  let skippedLocked = 0;
   for (const t of raw) {
     const m = eb.mapTransaction(t);
     if (!m.externalId || !m.date || m.amount <= 0) continue;
@@ -42,12 +53,19 @@ export async function syncLink(tenantId: string, linkId: string, conn: eb.Connec
           ...(m.legacyId ? [{ externalId: m.legacyId, date: new Date(m.date), amount: m.amount }] : []),
         ],
       },
-      select: { id: true, counterparty: true },
+      select: { id: true, counterparty: true, date: true },
     });
     if (known) {
-      if (!known.counterparty && m.counterparty) {
-        await prisma.payment.update({ where: { id: known.id }, data: { counterparty: m.counterparty, counterpartyIban: m.counterpartyIban } });
+      // nexrees: a closed booking stays as it is
+      if (!known.counterparty && m.counterparty && !inClosedPeriod(known.date, lock)) {
+        await asActor(BANK_SYNC, (tx) =>
+          tx.payment.update({ where: { id: known.id }, data: { counterparty: m.counterparty, counterpartyIban: m.counterpartyIban } }),
+        );
       }
+      continue;
+    }
+    if (inClosedPeriod(m.date, lock)) {
+      skippedLocked++;
       continue;
     }
     let chargeId: string | null = null;
@@ -59,13 +77,21 @@ export async function syncLink(tenantId: string, linkId: string, conn: eb.Connec
         matched++;
       }
     }
-    await prisma.payment.create({
-      data: {
-        tenantId, accountId: link.accountId, chargeId, date: new Date(m.date), amount: m.amount,
-        direction: m.direction, reference: m.reference, externalId: m.externalId,
-        counterparty: m.counterparty, counterpartyIban: m.counterpartyIban,
-      },
-    });
+    try {
+      await prisma.payment.create({
+        data: {
+          tenantId, accountId: link.accountId, chargeId, date: new Date(m.date), amount: m.amount,
+          direction: m.direction, reference: m.reference, externalId: m.externalId,
+          counterparty: m.counterparty, counterpartyIban: m.counterpartyIban,
+        },
+      });
+    } catch (e) {
+      // the period was closed while this sync ran: count it like the others, keep going
+      if (!periodLockMessage(e)) throw e;
+      if (chargeId) matched--;
+      skippedLocked++;
+      continue;
+    }
     imported++;
   }
   await prisma.bankLink.update({ where: { id: link.id }, data: { lastSyncAt: new Date() } });
@@ -81,7 +107,7 @@ export async function syncLink(tenantId: string, linkId: string, conn: eb.Connec
   } catch (e) {
     console.warn(`[bank] Kontostand ${link.id}: ${e instanceof Error ? e.message : e}`);
   }
-  return { imported, matched };
+  return { imported, matched, skippedLocked, lockedUntil: lockDay(lock) };
 }
 
 /** Alle verbundenen Konten eines Mandanten synchronisieren; Fehler je Konto sammeln. */
@@ -94,7 +120,7 @@ export async function syncTenantBank(tenantId: string): Promise<BankSyncResult |
   }
   if (!conn) return { error: "Kein Bank-Connector konfiguriert" };
   const links = await prisma.bankLink.findMany({ where: { tenantId }, include: { account: { select: { name: true } } } });
-  const res: BankSyncResult = { imported: 0, matched: 0, failed: [] };
+  const res: BankSyncResult = { imported: 0, matched: 0, skippedLocked: 0, lockedUntil: null, failed: [] };
   for (const l of links) {
     if (l.consentValidUntil && l.consentValidUntil < new Date()) {
       res.failed.push(`${l.account.name}: Freigabe abgelaufen`);
@@ -104,6 +130,8 @@ export async function syncTenantBank(tenantId: string): Promise<BankSyncResult |
       const r = await syncLink(tenantId, l.id, conn);
       res.imported += r.imported;
       res.matched += r.matched;
+      res.skippedLocked += r.skippedLocked;
+      res.lockedUntil = r.lockedUntil;
     } catch (e) {
       res.failed.push(`${l.account.name}: ${e instanceof Error ? e.message : "Abruf fehlgeschlagen"}`);
     }

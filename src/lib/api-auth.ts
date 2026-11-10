@@ -14,7 +14,8 @@ export function generateToken() {
   return { raw, hash: hashToken(raw), prefix: raw.slice(0, 12) };
 }
 
-export type ApiPrincipal = { userId: string; tenantId: string; role: UserRole; name: string };
+// nexrees: tokenId/tokenName identify the integration or agent in the audit trail
+export type ApiPrincipal = { userId: string; tenantId: string; role: UserRole; name: string; tokenId?: string; tokenName?: string };
 
 /** Authentifiziert einen Request per Bearer-Token. Null = ungültig. */
 export async function authenticateBearer(req: Request): Promise<ApiPrincipal | null> {
@@ -30,7 +31,7 @@ export async function authenticateBearer(req: Request): Promise<ApiPrincipal | n
   if (!roleAllows(tok.user.role, WRITE_ROLES)) return null;
   // best-effort, blockiert die Anfrage nicht
   void prisma.apiToken.update({ where: { id: tok.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
-  return { userId: tok.user.id, tenantId: tok.user.tenantId, role: tok.user.role, name: tok.user.name };
+  return { userId: tok.user.id, tenantId: tok.user.tenantId, role: tok.user.role, name: tok.user.name, tokenId: tok.id, tokenName: tok.name };
 }
 
 /** 401 in the shared error shape ({ error, code: "unauthorized" } + WWW-Authenticate). */

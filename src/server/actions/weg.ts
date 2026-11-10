@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/rbac";
+import { bookAs } from "@/server/ledger";
 import {
   ownerSchema,
   economicPlanSchema,
@@ -93,9 +94,12 @@ export async function createReserve(_p: ActionState, fd: FormData): Promise<Acti
   await prisma.reserve.create({ data: { ...r.data, tenantId: user.tenantId } });
   return done();
 }
-export async function deleteReserve(fd: FormData): Promise<void> {
+// nexrees: cascades into booked rows; refused with a message when they are in a closed period
+export async function deleteReserve(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.reserve.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.reserve.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 
@@ -105,12 +109,15 @@ export async function createReserveTx(_p: ActionState, fd: FormData): Promise<Ac
   if (!r.success) return invalid(r.error);
   const res = await prisma.reserve.findFirst({ where: { id: r.data.reserveId, tenantId: user.tenantId }, select: { id: true } });
   if (!res) return fail("Rücklage nicht gefunden");
-  await prisma.reserveTransaction.create({ data: { ...r.data, tenantId: user.tenantId } });
-  return done();
+  const locked = await bookAs(user, (tx) => tx.reserveTransaction.create({ data: { ...r.data, tenantId: user.tenantId } })); // nexrees
+  return locked ?? done();
 }
-export async function deleteReserveTx(fd: FormData): Promise<void> {
+// nexrees: deletion only in an open period; the database journals the full record (GoBD).
+export async function deleteReserveTx(fd: FormData): Promise<void | { error: string }> {
   const user = await requireWriter();
-  await prisma.reserveTransaction.deleteMany({ where: { id: String(fd.get("id") ?? ""), tenantId: user.tenantId } });
+  const id = String(fd.get("id") ?? "");
+  const locked = await bookAs(user, (tx) => tx.reserveTransaction.deleteMany({ where: { id, tenantId: user.tenantId } }));
+  if (locked) return locked;
   revalidatePath("/", "layout");
 }
 

@@ -103,3 +103,30 @@ export async function openChargesForLeases(tenantId: string, leaseIds: string[],
     FROM (${ledgerSql(tenantId, now, leaseIds)}) l WHERE l.status <> 'PAID' ORDER BY l."dueDate" ASC, l.id ASC`;
   return rows.map((r) => ({ ...r, amount: Number(r.amount), paid: Number(r.paid), open: Number(r.open) }));
 }
+
+export type SepaLeaseDue = { leaseId: string; due: number; balance: number; chargeIds: string[]; periods: Date[] };
+
+/**
+ * nexrees (SEPA direct debit): per lease, what may be collected on a debit run.
+ * - due: open amount of the charges due in [from, to] that have no dunning notice and were not
+ *   already put into an earlier, not cancelled direct-debit file (no double debit).
+ * - balance: the lease's net balance over all its charges, so credits (negative charges) and
+ *   overpayments reduce the debit. The caller collects min(due, balance).
+ */
+export async function sepaDueByLease(tenantId: string, from: Date, to: Date, now = new Date()): Promise<SepaLeaseDue[]> {
+  const pick = Prisma.sql`l."dueDate" >= ${from} AND l."dueDate" <= ${to} AND l."dunLevel" = 0 AND l.open > ${EPS}
+    AND NOT EXISTS (
+      SELECT 1 FROM "SepaCollectionItem" i JOIN "SepaCollection" s ON s.id = i."collectionId"
+      WHERE i."chargeId" = l.id AND s."cancelledAt" IS NULL)`;
+  const rows = await prisma.$queryRaw<{ leaseId: string; due: number; balance: number; chargeIds: string[]; periods: Date[] }[]>`
+    SELECT l."leaseId",
+      SUM(l.open) FILTER (WHERE ${pick}) AS due,
+      SUM(l.open) AS balance,
+      array_agg(l.id ORDER BY l."dueDate", l.id) FILTER (WHERE ${pick}) AS "chargeIds",
+      array_agg(l.period ORDER BY l."dueDate", l.id) FILTER (WHERE ${pick}) AS periods
+    FROM (${ledgerSql(tenantId, now)}) l
+    WHERE l."leaseId" IS NOT NULL
+    GROUP BY l."leaseId"
+    HAVING COUNT(*) FILTER (WHERE ${pick}) > 0`;
+  return rows.map((r) => ({ ...r, due: Number(r.due), balance: Number(r.balance) }));
+}

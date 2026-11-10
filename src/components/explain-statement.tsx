@@ -41,6 +41,9 @@ export function ExplainStatement({ propertyId, year }: { propertyId: string; yea
           ) : (
             <div className="max-h-[60vh] overflow-auto text-sm whitespace-pre-wrap">{state.answer}</div>
           )}
+          {state.answer && state.source && (
+            <p className="text-xs text-muted-foreground">{state.source}</p> // nexrees: AI Act Art. 50 label
+          )}
           {state.configured === false && (
             <p className="text-xs text-muted-foreground">{t("explainHint")}</p>
           )}

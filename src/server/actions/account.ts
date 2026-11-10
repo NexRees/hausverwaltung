@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
+import { passwordProblem } from "@/lib/password-policy";
 import type { ActionState } from "@/lib/schemas";
 
 /** Eigenes Passwort ändern (alle angemeldeten Rollen, inkl. Portal). */
@@ -11,7 +12,8 @@ export async function changePassword(_p: ActionState, fd: FormData): Promise<Act
   const user = await requireUser();
   const current = String(fd.get("current") ?? "");
   const next = String(fd.get("next") ?? "");
-  if (next.length < 6) return { error: "Neues Passwort zu kurz (min. 6 Zeichen)." };
+  const weak = passwordProblem(next, user.email); // nexrees: shared password policy
+  if (weak) return { error: weak };
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
   if (!dbUser || !(await bcrypt.compare(current, dbUser.passwordHash))) {

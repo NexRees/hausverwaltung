@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { buildStatement, monthsActiveInYear, type UnitInput, type CostInput, type StatementItem } from "@/lib/allocation/statement";
 import { extrapolateConsumption } from "@/lib/allocation/heating-degree-days";
 import type { AllocationMethod } from "@/lib/allocation";
+import { isAllocatable } from "@/lib/betrkv";
 
 /** Heiz-/Warmwasserverbrauch einer Einheit im Jahr aus den Zählerständen (Ablesedifferenz). */
 export function meterConsumption(meters: { readings: { value: unknown; date: Date }[] }[]): number {
@@ -101,12 +102,14 @@ export async function computeStatement(
   const tenantPct = property?.tenant.heatingConsumptionPct ?? null;
   const costInputs: CostInput[] = costs.map((c) => {
     const heating = c.type === "HEIZUNG" || c.type === "WARMWASSER";
-    const pct = c.consumptionSharePct ?? tenantPct;
+    // nexrees: §§ 7, 8 HeizkostenV, also for old rows and the company default: 50–100 %
+    const raw = c.consumptionSharePct ?? tenantPct;
+    const pct = raw == null ? null : Math.min(100, Math.max(50, raw));
     return {
       id: c.id,
       amount: Number(c.amount),
       method: c.method as AllocationMethod,
-      umlagefaehig: c.umlagefaehig,
+      umlagefaehig: isAllocatable(c.type, c.umlagefaehig), // nexrees: § 1 Abs. 2 BetrKV, also for old rows
       heating,
       consumptionShare: heating && pct != null ? pct / 100 : undefined,
       // Untergemeinschaft (#42): nur deren Einheiten tragen die Position.
@@ -154,7 +157,7 @@ export async function computeStatement(
       ? { id: property.id, name: property.name, street: property.street, zip: property.zip, city: property.city, tenantName: property.tenant.name }
       : null,
     costs: costs.map((c) => ({
-      id: c.id, type: c.type, amount: Number(c.amount), method: c.method, umlagefaehig: c.umlagefaehig, note: c.note,
+      id: c.id, type: c.type, amount: Number(c.amount), method: c.method, umlagefaehig: isAllocatable(c.type, c.umlagefaehig), note: c.note,
       subcommunityId: c.subcommunityId,
     })),
     units,
