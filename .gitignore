@@ -44,3 +44,8 @@ next-env.d.ts
 /storage/
 !.env.example
 !.env.prod.example
+
+# nexrees: Playwright E2E output
+e2e/.auth/
+e2e/.results/
+e2e/.report/
