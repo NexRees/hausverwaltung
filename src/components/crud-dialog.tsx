@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { startTransition, useActionState, useEffect, useId, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { outboxToast } from "@/components/outbox-toast";
@@ -99,14 +99,16 @@ export function CrudDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
-  // The label of the first field with an error, so the summary says which field is wrong.
-  const [errorField, setErrorField] = useState<string | null>(null);
-  useEffect(() => {
-    const first = Object.keys(fieldErrors)[0];
+  // The label of the first field with an error, so the summary says which field is wrong. Looked
+  // up before paint and tied to its field, so the alert never pairs one field's label with
+  // another field's message.
+  const firstErrorKey = Object.keys(fieldErrors)[0] ?? null;
+  const [errorField, setErrorField] = useState<{ key: string; label: string } | null>(null);
+  useLayoutEffect(() => {
     const form = formRef.current;
-    if (!first || !form) return setErrorField(null);
-    const label = form.querySelector(`label[for="${CSS.escape(first)}"]`)?.textContent?.trim();
-    setErrorField(label || null);
+    if (!firstErrorKey || !form) return setErrorField(null);
+    const label = form.querySelector(`label[for="${CSS.escape(firstErrorKey)}"]`)?.textContent?.trim();
+    setErrorField(label ? { key: firstErrorKey, label } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -156,7 +158,11 @@ export function CrudDialog({
             tabIndex={-1}
             className={visible.error ? "text-sm text-destructive outline-none" : "sr-only"}
           >
-            {visible.error ? (errorField && fieldErrors[Object.keys(fieldErrors)[0]] ? `${errorField}: ${visible.error}` : visible.error) : ""}
+            {visible.error
+              ? errorField && errorField.key === firstErrorKey
+                ? `${errorField.label}: ${visible.error}`
+                : visible.error
+              : ""}
           </p>
           <DialogFooter>
             {extraActions}

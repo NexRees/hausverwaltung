@@ -160,7 +160,7 @@ export default async function WegPage({
                       units={unitOpts}
                       subcommunity={{ id: s.id!, name: s.name!, unitIds: s.units.map((u) => u.id) }}
                     />
-                    <DeleteButton action={deleteSubcommunity} id={s.id!} />
+                    <DeleteButton action={deleteSubcommunity} id={s.id!} itemName={s.name ?? undefined} />
                   </div>
                 </div>
               ))
@@ -284,7 +284,11 @@ export default async function WegPage({
                     <TableCell className="text-right">{money(Number(c.amount), locale)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end">
-                        <DeleteButton action={deleteCost} id={c.id} />
+                        <DeleteButton
+                          action={deleteCost}
+                          id={c.id}
+                          itemName={[t(`costType.${c.type}`), c.note, money(Number(c.amount), locale)].filter(Boolean).join(" · ")}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -361,7 +365,7 @@ export default async function WegPage({
                     </div>
                     <div className="flex items-center gap-1">
                       <ReserveTxDialog reserveId={r.id} />
-                      <DeleteButton action={deleteReserve} id={r.id} />
+                      <DeleteButton action={deleteReserve} id={r.id} itemName={r.name} />
                     </div>
                   </div>
                   {r.transactions.length > 0 && (
@@ -376,7 +380,11 @@ export default async function WegPage({
                             <span className={Number(tx.amount) < 0 ? "text-destructive" : ""}>
                               {money(Number(tx.amount), locale)}
                             </span>
-                            <DeleteButton action={deleteReserveTx} id={tx.id} />
+                            <DeleteButton
+                              action={deleteReserveTx}
+                              id={tx.id}
+                              itemName={`${r.name} · ${tx.date.toISOString().slice(0, 10)} · ${money(Number(tx.amount), locale)}`}
+                            />
                           </div>
                         </div>
                       ))}

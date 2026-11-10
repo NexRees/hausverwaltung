@@ -16,7 +16,7 @@ export async function ListFilter({ q, keep = {}, total }: { q: string; keep?: Re
       <Button type="submit" size="sm" variant="outline">
         {t("common.search")}
       </Button>
-      {/* nexrees: the hit count is announced and says what the number means */}
+      {/* nexrees: the hit count says what the number means (role=status; data-total for agents) */}
       {total !== undefined && (
         <span role="status" className="text-sm text-muted-foreground" data-total={total}>
           {t("a11y.resultCount", { count: total })}

@@ -221,7 +221,7 @@ export default async function DocumentsPage({
                           <Button variant="ghost" size="icon" aria-label={t("documents.download")} render={<a href={`/api/documents/${d.id}`} />}>
                             <Download className="size-4" />
                           </Button>
-                          <DeleteButton action={deleteDocument} id={d.id} />
+                          <DeleteButton action={deleteDocument} id={d.id} itemName={d.name} />
                         </div>
                       </TableCell>
                     </TableRow>

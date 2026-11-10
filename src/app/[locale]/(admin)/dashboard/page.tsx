@@ -149,7 +149,7 @@ export default async function DashboardPage() {
         {stats.map((s) => (
           <Card key={s.key}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle as="p" className="text-sm font-medium text-muted-foreground">
                 {t(`dashboard.${s.key}`)}
               </CardTitle>
               <s.icon className="size-4 text-muted-foreground" />

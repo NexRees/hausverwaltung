@@ -152,7 +152,7 @@ export default async function PersonsPage({
                             custom: (p.custom as Record<string, string>) ?? {},
                           }}
                         />
-                        <DeleteButton action={deletePerson} id={p.id} />
+                        <DeleteButton action={deletePerson} id={p.id} itemName={[p.firstName, p.lastName].filter(Boolean).join(" ")} />
                       </div>
                     </TableCell>
                   </TableRow>

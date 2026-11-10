@@ -192,7 +192,7 @@ export default async function PropertyDetailPage({
               custom: customValues,
             }}
           />
-          <DeleteButton action={deleteProperty} id={property.id} />
+          <DeleteButton action={deleteProperty} id={property.id} itemName={property.name} />
         </div>
       </div>
 
@@ -351,11 +351,11 @@ export default async function PropertyDetailPage({
         property.buildings.map((b) => (
           <Card key={b.id}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">{b.name}</CardTitle>
+              <CardTitle as="h3" className="text-base">{b.name}</CardTitle>
               <div className="flex items-center gap-1">
                 <UnitDialog buildingId={b.id} customDefs={unitDefs} />
                 <BuildingDialog propertyId={property.id} building={{ id: b.id, name: b.name }} />
-                <DeleteButton action={deleteBuilding} id={b.id} />
+                <DeleteButton action={deleteBuilding} id={b.id} itemName={b.name} />
               </div>
             </CardHeader>
             <CardContent className="p-0">

@@ -22,12 +22,12 @@ validates and explains its errors.
 | Measure | Before | After |
 |---|---|---|
 | axe issues, demo data (46 page views) | 469 nodes | 1 node (a horizontally scrolling table on the phone dashboard) |
-| axe issues, 2,000-unit data (42 page views) | 854 nodes | 393 nodes, 300 of them small table links on `/finances`, fixed after that run |
-| Colour contrast | 81 nodes on 37 pages | 4 nodes on 2 pages (the 10 % destructive tint; token darkened after the run) |
+| axe issues, 2,000-unit data (42 page views) | 854 nodes | 5 nodes (the bell's unread badge in dark mode, fixed after the run; the phone dashboard table) |
+| Colour contrast | 81 nodes on 37 pages | 0 on the demo data; 4 on the 2,000-unit data, all the dark-mode unread badge, fixed after the run |
 | Landmarks (`main` nested, duplicated, missing) | 39 pages | 0 |
 | Unnamed selects / controls | 23 / 28 | 0 / 0 |
 | Distinct tab titles across admin pages | 2 | 29 (one per page) |
-| Page change announced to screen readers | never (same title everywhere) | every navigation, also when the page streams in |
+| Page change announced to screen readers | never (same title everywhere) | every page change (new path), also when the page streams in; a slow page is announced as loading first |
 | Form error keeps the typed input | no (React reset the form) | yes; field marked, focused, German message |
 | `GET /api/v1/charges` without paging | 56,871 rows, 7.3 MB, 3.3 s | 5,000 rows + `Link` next page, 0.3–0.4 s |
 | MCP `list_charges` default | 11.9 MB | 30 KB (50 rows + `nextOffset`) |

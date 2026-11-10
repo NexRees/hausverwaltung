@@ -162,7 +162,7 @@ export default async function UnitDetailPage({
                   </div>
                   <div className="flex items-center gap-1">
                     <ReadingDialog meterId={m.id} />
-                    <DeleteButton action={deleteMeter} id={m.id} />
+                    <DeleteButton action={deleteMeter} id={m.id} itemName={`${t(`meterType.${m.type}`)} ${m.serialNo}`} />
                   </div>
                 </div>
                 {m.readings.length === 0 ? (
@@ -185,7 +185,7 @@ export default async function UnitDetailPage({
                           <TableCell className="text-right">{String(r.value)}</TableCell>
                           <TableCell>
                             <div className="flex justify-end">
-                              <DeleteButton action={deleteReading} id={r.id} />
+                              <DeleteButton action={deleteReading} id={r.id} itemName={`${m.serialNo} · ${r.date.toISOString().slice(0, 10)}`} />
                             </div>
                           </TableCell>
                         </TableRow>

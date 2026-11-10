@@ -24,17 +24,24 @@ export type DeleteResult = void | { error?: string };
 
 /**
  * nexrees: the row a button sits in names the record ("Einheit W01"), so the button and the
- * confirmation say what will be deleted. Without an explicit itemName, the first cell of the
- * table row (or the nearest [data-item-name]) is used once mounted; 66 call sites stay untouched.
+ * confirmation say what will be deleted. Without an explicit itemName, the first line of the
+ * table row's first cell (or the nearest [data-item-name]) is used; pass itemName where that cell
+ * is a date or a type rather than the record's name.
  */
 function nameFromContext(el: HTMLElement | null): string | null {
   if (!el) return null;
   const marked = el.closest<HTMLElement>("[data-item-name]")?.dataset.itemName;
   if (marked) return marked;
   const row = el.closest("tr");
-  const cell = row?.querySelector("td, th");
+  const cell = row?.querySelector<HTMLElement>("td, th");
   if (!cell || cell.contains(el)) return null;
-  const text = cell.textContent?.replace(/\s+/g, " ").trim();
+  // innerText keeps the line breaks between stacked parts (name above address, badge below), so
+  // only the first line is used; textContent would glue them together.
+  const raw = cell.innerText || cell.textContent || "";
+  const text = raw
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .find(Boolean);
   return text && text.length <= 80 ? text : null;
 }
 
@@ -63,7 +70,16 @@ export function DeleteButton({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [derivedName, setDerivedName] = useState<string | null>(null);
   useEffect(() => {
-    if (!itemName) setDerivedName(nameFromContext(triggerRef.current));
+    if (itemName) return;
+    const el = triggerRef.current;
+    const update = () => setDerivedName(nameFromContext(el)); // same string: no re-render
+    update();
+    // A refresh can rename the record in place (same row, new text): follow it.
+    const scope = el?.closest("[data-item-name], tr");
+    if (!scope) return;
+    const observer = new MutationObserver(update);
+    observer.observe(scope, { childList: true, subtree: true, characterData: true, attributeFilter: ["data-item-name"] });
+    return () => observer.disconnect();
   }, [itemName]);
   const name = itemName ?? derivedName;
 

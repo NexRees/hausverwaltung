@@ -97,6 +97,8 @@ export default async function PortalPage() {
 
   const open = splitOpenItems(openCharges, now);
   const assigned = renters.length > 0 || owners.length > 0;
+  // Only tenants and owners wait for a flat; contractors and staff never get one.
+  const needsAssignment = !assigned && (user.role === "MIETER" || user.role === "EIGENTUEMER");
 
   const warm = (l: (typeof renters)[number]["lease"]) =>
     Number(l.rentCold) + l.components.reduce((a, c) => a + Number(c.amount), 0);
@@ -111,7 +113,7 @@ export default async function PortalPage() {
       </div>
 
       {/* nexrees: an account without lease or ownership gets an explanation instead of an empty page */}
-      {!assigned && (
+      {needsAssignment && (
         <Card className="ring-amber-500/40">
           <CardHeader>
             <CardTitle className="text-base">{t("portal.unassignedTitle")}</CardTitle>

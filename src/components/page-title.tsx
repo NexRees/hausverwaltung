@@ -7,6 +7,7 @@
 // browser/tab title, agents can tell pages apart, and Next's route announcer reads the new title
 // (below). Without this every page had the same title and navigation was silent for screen readers.
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 import { BRAND } from "@/lib/brand";
 
@@ -22,8 +23,12 @@ export function documentTitle(pageTitle: string): string {
   return pageTitle ? `${pageTitle} · ${BRAND.name}` : BRAND.name;
 }
 
+/** A page still loading after this long is announced as loading, then by its title. */
+const LOADING_ANNOUNCE_MS = 600;
+
 export function PageTitle() {
   const pathname = usePathname();
+  const loadingText = useTranslations("a11y")("loadingPage");
   const [title, setTitle] = useState("");
   const [tabTitle, setTabTitle] = useState("");
   // Announces the new page after a client-side navigation, once its heading is there (it often
@@ -38,25 +43,39 @@ export function PageTitle() {
     const root = document.querySelector(`[${PAGE_CONTENT_ATTR}]`);
     let pending = mounted.current; // not on the first load: screen readers read the new document
     mounted.current = true;
+    let loadingTimer: number | undefined;
     const update = () => {
       const next = readTitle();
       setTitle(next);
-      if (!next) return; // loading skeleton: the tab keeps the previous title until the page is there
+      if (!next) {
+        // Loading skeleton: the tab keeps the previous title until the page is there. A slow page
+        // is announced as loading (the skeleton's own status text is never read: it is inserted
+        // together with its content).
+        if (pending && loadingTimer === undefined) {
+          loadingTimer = window.setTimeout(() => {
+            if (pending) setAnnouncement({ path: pathname, text: loadingText });
+          }, LOADING_ANNOUNCE_MS);
+        }
+        return;
+      }
       setTabTitle(next);
       const tab = documentTitle(next);
       if (document.title !== tab) document.title = tab;
       if (pending) {
         pending = false;
+        window.clearTimeout(loadingTimer);
         setAnnouncement({ path: pathname, text: next });
       }
     };
     update();
-    if (!root) return;
     // Streaming, client navigation and in-page edits (renaming an entity) all change the h1.
-    const observer = new MutationObserver(update);
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [pathname]);
+    const observer = root ? new MutationObserver(update) : null;
+    observer?.observe(root!, { childList: true, subtree: true, characterData: true });
+    return () => {
+      observer?.disconnect();
+      window.clearTimeout(loadingTimer);
+    };
+  }, [pathname, loadingText]);
 
   return (
     <>

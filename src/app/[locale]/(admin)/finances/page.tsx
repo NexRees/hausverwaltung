@@ -309,7 +309,19 @@ export default async function FinancesPage({
                             <Printer className="size-4" />
                           </Button>
                         )}
-                        <DeleteButton action={deleteCharge} id={c.id} />
+                        <DeleteButton
+                          action={deleteCharge}
+                          id={c.id}
+                          itemName={[
+                            t(`chargeType.${c.type}`),
+                            date(c.period, df),
+                            c.lease
+                              ? `${c.lease.unit.building.property.name} · ${c.lease.unit.label}`
+                              : money(Number(c.amount), locale),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -439,7 +451,11 @@ export default async function FinancesPage({
                           payment={{ id: p.id, note: p.note, documentIds: p.documents.map((d) => d.id) }}
                           documents="documents"
                         />
-                        <DeleteButton action={deletePayment} id={p.id} />
+                        <DeleteButton
+                          action={deletePayment}
+                          id={p.id}
+                          itemName={[date(p.date, df), money(Number(p.amount), locale), p.counterparty].filter(Boolean).join(" · ")}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
