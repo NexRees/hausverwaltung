@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { roleAllows, WRITE_ROLES, assignableRoles, canDeleteUser, type SessionUser } from "@/lib/rbac";
 import type { ApiPrincipal } from "@/lib/api-auth";
 import * as S from "@/lib/schemas";
+import { apiIssueMessage } from "@/lib/zod-de";
 import { deleteFile } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 
@@ -136,7 +137,11 @@ async function checkRelations(tenantId: string, relations: Record<string, string
 
 function parse(schema: z.ZodTypeAny, input: Record<string, unknown>) {
   const r = schema.safeParse(input);
-  if (!r.success) throw new ApiWriteError(r.error.issues[0]?.message ?? "Ungültige Eingabe", 400);
+  if (!r.success) {
+    // The field and the allowed values, not just the form wording ("Bitte einen gültigen Wert auswählen.").
+    const issue = r.error.issues[0];
+    throw new ApiWriteError(issue ? apiIssueMessage(issue) : "Ungültige Eingabe", 400);
+  }
   return r.data as Record<string, unknown>;
 }
 

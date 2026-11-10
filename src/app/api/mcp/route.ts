@@ -12,6 +12,7 @@ import { APP_VERSION_FULL_NUMBER, APP_SHA } from "@/lib/version";
 import { apiCreate, apiUpdate, apiDelete, listEntities, ENTITIES } from "@/lib/api-write";
 import { runOperation, listOperations, OPERATION_NAMES } from "@/lib/api-ops";
 import { BRAND } from "@/lib/brand";
+import { MAX_OFFSET } from "@/lib/api-http";
 
 // MCP-Server (Model Context Protocol) über Streamable HTTP / JSON-RPC.
 // Auth: Bearer-Token (persönlicher API-Token). Der Agent (Claude, ChatGPT,
@@ -54,7 +55,7 @@ const idOf = (what: string) => ({ type: "string", description: `ID ${what}` });
 // nexrees: every list tool is paged and answers { items, total, offset, limit, nextOffset }
 const PAGING: Record<string, JsonSchema> = {
   limit: { type: "integer", minimum: 1, maximum: MCP_MAX_LIMIT, default: MCP_DEFAULT_LIMIT, description: `Einträge pro Seite / page size (1–${MCP_MAX_LIMIT}, Standard ${MCP_DEFAULT_LIMIT})` },
-  offset: { type: "integer", minimum: 0, default: 0, description: "Zu überspringende Einträge / rows to skip (nextOffset der vorigen Seite)" },
+  offset: { type: "integer", minimum: 0, maximum: MAX_OFFSET, default: 0, description: "Zu überspringende Einträge / rows to skip (nextOffset der vorigen Seite)" },
 };
 const Q: Record<string, JsonSchema> = {
   q: { type: "string", description: "Freitext, jedes Wort muss passen / free text, every word must match" },
@@ -73,8 +74,9 @@ function listTool<O>(
     run: async (p, a) => {
       const limit = typeof a.limit === "number" ? a.limit : MCP_DEFAULT_LIMIT;
       const offset = typeof a.offset === "number" ? a.offset : 0;
-      // arguments are validated against inputSchema before run
-      return mcpPage(await fn(p.tenantId, { ...a, limit, offset } as unknown as O), offset, limit);
+      // arguments are validated against inputSchema before run; null means "not sent", as there
+      const args = Object.fromEntries(Object.entries(a).filter(([, v]) => v != null));
+      return mcpPage(await fn(p.tenantId, { ...args, limit, offset } as unknown as O), offset, limit);
     },
   };
 }
@@ -329,7 +331,7 @@ export async function POST(req: Request) {
         return rpc(id, toolResult(result));
       } catch (e) {
         return rpc(id, {
-          content: [{ type: "text", text: `Fehler: ${e instanceof Error ? e.message : "unbekannt"}` }],
+          content: [{ type: "text", text: `Fehler: ${toolErrorText(e)}` }],
           isError: true,
         });
       }
@@ -337,6 +339,16 @@ export async function POST(req: Request) {
     default:
       return rpcError(id, -32601, `Methode nicht unterstützt: ${method}`);
   }
+}
+
+/** Message for a failed tool call. Database errors carry query details, so they are logged and replaced. */
+function toolErrorText(e: unknown): string {
+  if (!(e instanceof Error)) return "unbekannt";
+  if (e.name.startsWith("PrismaClient")) {
+    console.error("[mcp] tool failed", e);
+    return "Interner Fehler (internal error)";
+  }
+  return e.message;
 }
 
 // Manche Clients prüfen GET (SSE-Stream). Stateless → nicht unterstützt.

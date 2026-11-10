@@ -2,7 +2,8 @@
 // zod's defaults were English ("Too small: expected string to have >=1 characters") even in the
 // German UI. The common cases get short, user-facing wording; anything else falls back to zod's
 // own German locale. The field itself is named by the form (CrudDialog shows the message next to
-// the field and prefixes the summary with the field's label), so messages don't repeat it.
+// the field and prefixes the summary with the field's label), so messages don't repeat it. The API
+// and MCP have no form: they use apiIssueMessage(), which adds the field and the allowed values.
 import { z } from "zod";
 
 type Issue = {
@@ -48,11 +49,23 @@ export function germanMessage(iss: Issue): string | undefined {
     case "invalid_type":
       if (iss.input === undefined || iss.input === null || iss.input === "") return "Pflichtfeld – bitte ausfüllen.";
       if (iss.expected === "date") return "Bitte ein gültiges Datum eingeben.";
-      if (iss.expected === "number" || iss.expected === "int" || iss.expected === "bigint") return "Bitte eine gültige Zahl eingeben.";
+      // zod raises expected "int" only for a finite number with a fractional part.
+      if (iss.expected === "int") return "Bitte eine ganze Zahl eingeben.";
+      if (iss.expected === "number" || iss.expected === "bigint") return "Bitte eine gültige Zahl eingeben.";
       return undefined;
     default:
       return undefined;
   }
+}
+
+/**
+ * One validation problem for API and MCP callers, who have no form to point at the field:
+ * "type: Bitte einen gültigen Wert auswählen. (erlaubt: WOHNEN, GEWERBE)".
+ */
+export function apiIssueMessage(iss: { path?: readonly PropertyKey[]; message: string; code?: string; values?: readonly unknown[] }): string {
+  const field = iss.path?.length ? `${iss.path.map(String).join(".")}: ` : "";
+  const allowed = iss.code === "invalid_value" && iss.values?.length ? ` (erlaubt: ${iss.values.map(String).join(", ")})` : "";
+  return `${field}${iss.message}${allowed}`;
 }
 
 let installed = false;

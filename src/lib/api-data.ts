@@ -2,6 +2,7 @@ import type { Prisma, PersonType, TicketStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { chargeLedgerPage, chargeStatus, type ChargeStatus } from "@/server/charge-ledger";
 import { tokenizedWhere, SEARCH_FIELDS } from "@/lib/search";
+import { MAX_OFFSET } from "@/lib/api-http";
 
 // Geteilte, mandanten-gescopte Datenschicht für REST-API und MCP-Server.
 // Alle Funktionen erhalten die tenantId aus dem authentifizierten Token.
@@ -16,7 +17,7 @@ export const LIST_CEILING = 5000;
 export type ListOpts = { limit?: number; offset?: number; q?: string };
 export type ListPage<T> = { items: T[]; total: number };
 const pg = (o: ListOpts) => ({
-  skip: Math.max(0, Math.floor(o.offset ?? 0)),
+  skip: Math.min(MAX_OFFSET, Math.max(0, Math.floor(o.offset ?? 0))),
   take: Math.min(LIST_CEILING, Math.max(0, Math.floor(o.limit ?? LIST_CEILING))),
 });
 const fullName = (p: { firstName: string; lastName: string }) => `${p.firstName} ${p.lastName}`;
@@ -375,7 +376,11 @@ export async function listAccounts(tenantId: string, o: ListOpts = {}) {
     const balance = sums
       .filter((s) => s.accountId === a.id)
       .reduce((s, x) => s + (x.direction === "EINGANG" ? 1 : -1) * Number(x._sum.amount ?? 0), 0);
-    return { id: a.id, name: a.name, type: a.type, iban: a.iban, balance: round2(balance) };
+    // balance = booked (sum of payments); bankBalance = what the bank last reported
+    return {
+      id: a.id, name: a.name, type: a.type, iban: a.iban, balance: round2(balance),
+      bankBalance: num(a.balance), bankBalanceAt: a.balanceAt,
+    };
   });
   return { items, total };
 }
@@ -624,8 +629,8 @@ export async function listAppointments(tenantId: string, o: ListOpts = {}) {
   return { items, total };
 }
 
-export async function listTasks(tenantId: string, o: ListOpts & { done?: boolean } = {}) {
-  const where: Prisma.TaskWhereInput = { tenantId, ...(o.done === undefined ? {} : { done: o.done }) };
+export async function listTasks(tenantId: string, o: ListOpts & { done?: boolean | null } = {}) {
+  const where: Prisma.TaskWhereInput = { tenantId, ...(o.done == null ? {} : { done: o.done }) };
   const [rows, total] = await Promise.all([
     prisma.task.findMany({
       where,

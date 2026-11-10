@@ -222,11 +222,23 @@ const READERS: Record<string, Reader> = {
         createdAt: true, propertyId: true, property: named,
       },
     }),
-  account: (tenantId, id) =>
-    prisma.account.findFirst({
+  // `balance` is the booked balance (sum of payments), as in list_accounts; the figure the bank
+  // last reported is `bankBalance` / `bankBalanceAt`.
+  account: async (tenantId, id) => {
+    const a = await prisma.account.findFirst({
       where: { id, tenantId },
       select: { id: true, name: true, type: true, iban: true, balance: true, balanceAt: true, createdAt: true },
-    }),
+    });
+    if (!a) return null;
+    const sums = await prisma.payment.groupBy({
+      by: ["direction"],
+      where: { tenantId, accountId: id },
+      _sum: { amount: true },
+    });
+    const booked = sums.reduce((s, x) => s + (x.direction === "EINGANG" ? 1 : -1) * Number(x._sum.amount ?? 0), 0);
+    const { balance: bankBalance, balanceAt: bankBalanceAt, ...rest } = a;
+    return { ...rest, balance: Math.round(booked * 100) / 100, bankBalance, bankBalanceAt };
+  },
   meter: (tenantId, id) =>
     prisma.meter.findFirst({
       where: { id, tenantId },

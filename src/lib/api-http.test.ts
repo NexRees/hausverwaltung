@@ -31,6 +31,11 @@ describe("parsePaging", () => {
     expect(parsePaging(url("?limit=2.9")).limit).toBe(2);
     expect(parsePaging(url("?offset=-4")).offset).toBe(0);
   });
+  it("rejects an offset beyond what the database accepts (400, not a 500)", () => {
+    expect(parsePaging(url("?offset=2147483647")).offset).toBe(2147483647);
+    expect(() => parsePaging(url("?offset=2147483648"))).toThrow(expect.objectContaining({ status: 400, code: "invalid_parameter" }));
+    expect(() => parsePaging(url("?offset=1e300"))).toThrow(ApiHttpError);
+  });
   it("rejects non-numeric limit/offset with a 400 invalid_parameter", () => {
     expect(() => parsePaging(url("?limit=abc"))).toThrow(ApiHttpError);
     try {

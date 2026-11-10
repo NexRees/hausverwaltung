@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { roleAllows, WRITE_ROLES } from "@/lib/rbac";
+import { unauthorizedJson } from "@/lib/api-http";
 
 export function hashToken(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");
@@ -32,6 +33,7 @@ export async function authenticateBearer(req: Request): Promise<ApiPrincipal | n
   return { userId: tok.user.id, tenantId: tok.user.tenantId, role: tok.user.role, name: tok.user.name };
 }
 
+/** 401 in the shared error shape ({ error, code: "unauthorized" } + WWW-Authenticate). */
 export function unauthorized(): Response {
-  return Response.json({ error: "Unauthorized — Bearer-Token fehlt oder ungültig" }, { status: 401 });
+  return unauthorizedJson();
 }

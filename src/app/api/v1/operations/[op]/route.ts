@@ -1,16 +1,13 @@
 import { authenticateBearer, unauthorized } from "@/lib/api-auth";
 import { runOperation } from "@/lib/api-ops";
-import { ApiWriteError } from "@/lib/api-write";
+import { readJsonBody, safeHandler } from "@/lib/api-http";
 
-export async function POST(req: Request, { params }: { params: Promise<{ op: string }> }) {
+// nexrees: errors in the shared shape { error, code }. Operations without required parameters
+// (e.g. run_dunning) still accept an empty body; a malformed one is 400 invalid_json.
+export const POST = safeHandler(async (req: Request, { params }: { params: Promise<{ op: string }> }) => {
   const p = await authenticateBearer(req);
   if (!p) return unauthorized();
   const { op } = await params;
-  const body = await req.json().catch(() => ({}));
-  try {
-    return Response.json(await runOperation(p, op, body ?? {}));
-  } catch (e) {
-    if (e instanceof ApiWriteError) return Response.json({ error: e.message }, { status: e.status });
-    throw e;
-  }
-}
+  const hasBody = (await req.clone().text()).trim() !== "";
+  return Response.json(await runOperation(p, op, hasBody ? await readJsonBody(req) : {}));
+});

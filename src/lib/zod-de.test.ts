@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { invalid } from "./schemas"; // installs the German messages
+import { apiIssueMessage } from "./zod-de";
 
 describe("German validation messages", () => {
   const schema = z.object({
@@ -29,5 +30,20 @@ describe("German validation messages", () => {
     const r = z.object({ title: z.string().min(5).max(3) }).safeParse({});
     const state = invalid(r.error!);
     expect(state.fieldErrors).toEqual({ title: "Pflichtfeld – bitte ausfüllen." });
+  });
+
+  it("names the field and the allowed values for API and MCP callers", () => {
+    const r = z.object({ type: z.enum(["WOHNEN", "GEWERBE"]), rent: z.object({ amount: z.coerce.number().min(0) }) })
+      .safeParse({ type: "BUERO", rent: { amount: -5 } });
+    const [first, second] = r.error!.issues;
+    expect(apiIssueMessage(first)).toBe("type: Bitte einen gültigen Wert auswählen. (erlaubt: WOHNEN, GEWERBE)");
+    expect(apiIssueMessage(second)).toBe("rent.amount: Muss mindestens 0 sein.");
+    expect(apiIssueMessage({ path: [], message: "Ungültig." })).toBe("Ungültig.");
+  });
+
+  it("tells a fractional value apart from a non-number", () => {
+    const s = z.object({ count: z.coerce.number().int().positive() });
+    expect(invalid(s.safeParse({ count: 2.5 }).error!).fieldErrors).toEqual({ count: "Bitte eine ganze Zahl eingeben." });
+    expect(invalid(s.safeParse({ count: "abc" }).error!).fieldErrors).toEqual({ count: "Bitte eine gültige Zahl eingeben." });
   });
 });

@@ -7,6 +7,8 @@ export const MAX_LIMIT = 500;
 /** Rows a list returns when the caller sends no paging parameters (old clients). */
 export const LEGACY_CEILING = 5000;
 export const MAX_Q_LENGTH = 100;
+/** Largest offset a list accepts (Postgres OFFSET is a 32-bit integer for Prisma; larger values made it throw). */
+export const MAX_OFFSET = 2_147_483_647;
 
 /** Error with an HTTP status and a stable machine-readable code. */
 export class ApiHttpError extends Error {
@@ -120,6 +122,9 @@ export function parsePaging(url: URL | string): Paging {
   const offset = intParam(sp.get("offset"));
   if (Number.isNaN(limit)) throw new ApiHttpError(400, "invalid_parameter", "limit muss eine Zahl sein", { parameter: "limit" });
   if (Number.isNaN(offset)) throw new ApiHttpError(400, "invalid_parameter", "offset muss eine Zahl sein", { parameter: "offset" });
+  if (offset !== undefined && offset > MAX_OFFSET) {
+    throw new ApiHttpError(400, "invalid_parameter", `offset darf höchstens ${MAX_OFFSET} sein`, { parameter: "offset" });
+  }
   if (!paged) return { limit: LEGACY_CEILING, offset: 0, paged: false };
   return {
     limit: Math.min(MAX_LIMIT, Math.max(1, limit ?? DEFAULT_LIMIT)),
