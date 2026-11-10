@@ -21,7 +21,7 @@ validates and explains its errors.
 
 | Measure | Before | After |
 |---|---|---|
-| axe issues, demo data (46 page views) | 469 nodes | 72 nodes (final run below) |
+| axe issues, demo data (46 page views) | 469 nodes | 1 node (a horizontally scrolling table on the phone dashboard) |
 | axe issues, 2,000-unit data (42 page views) | 854 nodes | 393 nodes, 300 of them small table links on `/finances`, fixed after that run |
 | Colour contrast | 81 nodes on 37 pages | 4 nodes on 2 pages (the 10 % destructive tint; token darkened after the run) |
 | Landmarks (`main` nested, duplicated, missing) | 39 pages | 0 |
