@@ -1,6 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Pager } from "@/components/pager";
-import { intlLocale } from "@/lib/format";
+import { intlLocale, APP_TIME_ZONE } from "@/lib/format";
 import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ const PAGE_SIZE = 50;
 const ACTIONS = ["CREATE", "UPDATE", "DELETE"];
 
 function dateTime(d: Date, locale: string) {
-  return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short" }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short", timeZone: APP_TIME_ZONE }).format(d);
 }
 
 export default async function AuditPage({

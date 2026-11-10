@@ -1,4 +1,5 @@
 import { getLocale } from "next-intl/server";
+import { APP_TIME_ZONE } from "@/lib/format";
 import { Building2 } from "lucide-react";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -25,7 +26,7 @@ export default async function PortalLayout({ children }: { children: React.React
     prisma.notification.count({ where: { userId: user.id, read: false } }),
     prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { name: true, logoKey: true } }),
   ]);
-  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
+  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short", timeZone: APP_TIME_ZONE });
   const notifItems = notifs.map((n) => ({
     id: n.id,
     title: n.title,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { APP_TIME_ZONE } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/rbac";
@@ -40,7 +41,7 @@ export default async function AdminLayout({
     prisma.notification.count({ where: { userId: user.id, read: false } }),
   ]);
   const logoUrl = tenant?.logoKey ? "/api/logo" : undefined;
-  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
+  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short", timeZone: APP_TIME_ZONE });
   const notifItems = notifs.map((n) => ({
     id: n.id,
     title: n.title,
